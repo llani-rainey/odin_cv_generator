@@ -1,7 +1,25 @@
-export default function Header() {
-  return (
-    <div>
-      <h1>Header</h1>
-    </div>
-  )
-}
+
+
+
+{/*
+id: 4,
+type: 'education',
+title: 'Education',
+entries: [
+{
+    id: 1,
+    degree: 'Bachelor of Laws (incomplete)',
+    institution: 'University of Cambridge',
+    institutionURL: '',
+    link: 'https://www.cam.ac.uk',
+    startDate: '1872',
+    endDate: '1874',
+    text: 'Departed before completion to pursue consulting work. Gained sufficient knowledge of criminal law to consistently outperform Scotland Yard.',
+    bullets: [
+        'Studied criminal law, evidence, and legal procedure — applied directly to subsequent casework',
+        'Developed foundational chemistry knowledge later extended through independent study at 221B',
+        'Awarded informal distinction in logical reasoning by Professor Moriarty (subsequently revoked following professional disagreement at Reichenbach Falls)',
+    ],
+},
+
+    */}
