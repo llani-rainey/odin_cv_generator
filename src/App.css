@@ -39,10 +39,8 @@ body {
     color: white;
     cursor: pointer;
     font-size: 1.2em;
-    width: 100%;
-    text-align: right;
-    padding: 5px 0;
-    margin-bottom: 10px;
+    padding: 0;
+    margin: 0;
 }
 
 .collapse-btn:hover {
@@ -116,7 +114,7 @@ body {
 
 .cv-section-line {
     border: none;
-    border-top: 1px solid black;
+    border-top: 1px solid var(--accent-color, black);
     margin-bottom: 6px;
 }
 
@@ -184,4 +182,254 @@ textarea:focus {
     outline: 2px solid #4a90d9;
     outline-offset: 2px;
     border-radius: 3px;
+}
+
+Good call — let's style the form panel properly first. Add this to your `App.css`:
+
+```css
+
+/* Form Panel General */
+.form-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding-bottom: 40px;
+    padding-top: 8px;
+}
+
+.form-section-title {
+    font-size: 0.85em;
+    font-weight: bold;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #444;
+}
+
+.form-generic-section,
+.form-experience-section,
+.form-education-section {
+    border-top: 1px solid #333;
+    padding-top: 16px;
+    margin-top: 8px;
+}
+
+/* Individual form sections */
+.form-settings,
+.form-header,
+.form-generic-section,
+.form-experience-section,
+.form-education-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Two column layout for form fields */
+.form-fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+/* Individual entries within a section */
+.form-generic-entry,
+.form-experience-entry,
+.form-education-entry {
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+/* Field label + input pairs */
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.form-field label {
+    font-size: 0.75em;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 2px;
+}
+
+/* All inputs, textareas, selects */
+.form-content input[type='text'],
+.form-content input[type='email'],
+.form-content input[type='color'],
+.form-content select,
+.form-content textarea {
+    width: 100%;
+    background: #1a1a1a;
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #ffffff;
+    padding: 8px 10px;
+    font-size: 0.9em;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.form-content input[type='text']:focus,
+.form-content input[type='email']:focus,
+.form-content select:focus,
+.form-content textarea:focus {
+    outline: none;
+    border-color: #4a90d9;
+}
+
+.form-content textarea {
+    resize: vertical;
+    min-height: 70px;
+}
+
+/* Radio groups */
+.form-radio-group {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.form-radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9em;
+    color: #ffffff;
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* Links section */
+.form-links {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.form-links>label {
+    font-size: 0.75em;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.form-link-entry {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.form-link-entry input {
+    flex: 1;
+}
+
+/* Bullet rows */
+.form-bullet-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.form-bullet-row input {
+    flex: 1;
+}
+
+/* Buttons */
+.form-content button {
+    background: #2a2a2a;
+    border: 1px solid #555;
+    color: #ffffff;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: background 0.2s ease;
+    text-align: center;
+}
+
+.form-content button:hover {
+    background: #3a3a3a;
+}
+
+/* Delete buttons — red tint */
+.btn-delete {
+    color: #ff6b6b !important;
+    border-color: #663333 !important;
+    background: #2a1a1a !important;
+}
+
+.btn-delete:hover {
+    background: #3a2020 !important;
+}
+
+/* Add buttons — blue tint */
+.btn-add {
+    color: #4a90d9 !important;
+    border-color: #1a3a5c !important;
+    background: #1a2a3a !important;
+}
+
+.btn-add:hover {
+    background: #1f3347 !important;
+}
+
+/* Colour picker */
+.form-content input[type='color'] {
+    padding: 2px;
+    height: 36px;
+    cursor: pointer;
+}
+
+/* Dates side by side */
+.form-dates-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.form-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0 12px 0;
+    margin-bottom: 4px;
+    border-bottom: 1px solid #333;
+}
+
+.form-panel-logo {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #4a90d9;
+    letter-spacing: 0.05em;
+}
+
+.form-settings {
+    padding-top: 12px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #333;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.form-header {
+    border-top: 1px solid #333;
+    padding-top: 16px;
+    margin-top: 8px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
 }

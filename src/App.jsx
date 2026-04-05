@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import Header from './components/Header'
 import Section from './components/Section'
-import ExperienceEntry from './components/ExperienceEntry'
-import EducationEntry from './components/EducationEntry'
-import GenericEntry from './components/GenericEntry'
 import './App.css'
 import CVSettingsForm from './components/CVSettingsForm'
 import HeaderForm from './components/HeaderForm'
+import GenericEntryForm from './components/GenericEntryForm'
+import ExperienceEntryForm from './components/ExperienceEntryForm'
+import EducationEntryForm from './components/EducationEntryForm'
 
 export default function App() {
     const [formOpen, setFormOpen] = useState(true)
@@ -220,39 +220,65 @@ export default function App() {
         setCvSettings({ ...cvSettings, [field]: value })
     }
 
-    function handlePersonalInfoChange(field, value) {
-        setPersonalInfo({ ...personalInfo, [field]: value })
-    }
 
     return (
         <div className="app">
-            <div
-                className={`form-panel ${formOpen ? '' : 'form-panel--collapsed'}`}
-            >
-                <button
-                    className="collapse-btn"
-                    onClick={() => setFormOpen(!formOpen)}
-                >
-                    {formOpen ? '←' : '→'}
-                </button>
+            <div className={`form-panel ${formOpen ? '' : 'form-panel--collapsed'}`}>
+                <div className="form-panel-header">
+                    {formOpen && <span className="form-panel-logo">CV Builder</span>}
+                    <button
+                        className="collapse-btn"
+                        onClick={() => setFormOpen(!formOpen)}
+                    >
+                        {formOpen ? '←' : '→'}
+                    </button>
+                </div>
                 {formOpen && (
-                    <div className="form-content">{/* forms go here */}
+                    <div className="form-content">
+                        {/* forms go here */}
                         <CVSettingsForm
                             cvSettings={cvSettings}
                             onCvSettingsChange={handleCvSettingsChange}
-                            
                         />
                         <HeaderForm
                             personalInfo={personalInfo}
-                            onPersonalInfoChange={handlePersonalInfoChange}
+                            setPersonalInfo={setPersonalInfo}
                         />
+                        {sections.map((section) => {
+                            if (section.type === 'experience') {
+                                return (
+                                    <ExperienceEntryForm
+                                        key={section.id}
+                                        section={section}
+                                        sections={sections}
+                                        setSections={setSections}
+                                    />
+                                )
+                            }
+                            if (section.type === 'education') {
+                                return (
+                                    <EducationEntryForm
+                                        key={section.id}
+                                        section={section}
+                                        sections={sections}
+                                        setSections={setSections}
+                                    />
+                                )
+                            }
+                            return (
+                                <GenericEntryForm
+                                    key={section.id}
+                                    section={section}
+                                    sections={sections}
+                                    setSections={setSections}
+                                />
+                            )
+                        })}
                     </div>
-
                 )}
             </div>
             <div className="preview-panel">
                 {/* toolbar sits here — above the CV page */}
-                
 
                 {/* cv page sits below the toolbar */}
                 <div
@@ -264,15 +290,15 @@ export default function App() {
                             cvSettings.margins === 'narrow'
                                 ? '40px 50px'
                                 : cvSettings.margins === 'moderate'
-                                ? '56px 72px'
-                                : '72px 96px',
+                                  ? '56px 72px'
+                                  : '72px 96px',
+                        '--accent-color': cvSettings.accentColor,
                     }}
                 >
                     <Header personalInfo={personalInfo} />
-                    {sections.map(section => (
+                    {sections.map((section) => (
                         <Section key={section.id} section={section} />
                     ))}
-                
                 </div>
             </div>
         </div>
