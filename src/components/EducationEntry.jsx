@@ -1,7 +1,31 @@
+export default function EducationEntry({ entry }) {
+    return (
+        <div className="cv-education-entry">
+            <p className="cv-education-entry-main-line">
+                <strong>{entry.degree}</strong>
+                {' — '}
+                {entry.link ? (
+                    <a href={entry.link}>{entry.institution}</a>
+                ) : (
+                    entry.institution
+                )}
+                {' — '}
+                {entry.startDate} - {entry.endDate}
+            </p>
+            {entry.text && <p className="cv-entry-text">{entry.text}</p>}
+            {entry.bullets.length > 0 && (
+                <ul className="cv-education-bullets">
+                    {entry.bullets.map((bullet, index) => (
+                        <li key={index}>{bullet}</li>
+                    ))}
+                </ul>
+            )}
+        </div>
+    )
+}
 
-
-
-{/*
+{
+    /*
 id: 4,
 type: 'education',
 title: 'Education',
@@ -22,4 +46,5 @@ entries: [
     ],
 },
 
-    */}
+    */
+}

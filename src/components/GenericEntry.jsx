@@ -4,7 +4,7 @@ export default function GenericEntry( { entry } ) {
         <div className="cv-generic-entry">
             {entry.subheading && (
                 <p className="cv-entry-subheading">
-                    {entry.subheading}
+                    <strong>{entry.subheading}</strong>
                     {entry.link && (
                         <span>
                             {' '}

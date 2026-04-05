@@ -5,6 +5,8 @@ import ExperienceEntry from './components/ExperienceEntry'
 import EducationEntry from './components/EducationEntry'
 import GenericEntry from './components/GenericEntry'
 import './App.css'
+import CVSettingsForm from './components/CVSettingsForm'
+import HeaderForm from './components/HeaderForm'
 
 export default function App() {
     const [formOpen, setFormOpen] = useState(true)
@@ -34,7 +36,7 @@ export default function App() {
     const [cvSettings, setCvSettings] = useState({
         font: 'Arial',
         fontSize: '11px',
-        margins: 'moderate', // 'narrow' | 'moderate' | 'normal'
+        margins: 'narrow', // 'narrow' | 'moderate' | 'normal'
         accentColor: '#000000',
     })
 
@@ -132,6 +134,20 @@ export default function App() {
                         'Operated under multiple aliases with zero compromise of identity across 8-year tenure',
                     ],
                 },
+                {
+                    id: 3,
+                    jobTitle: 'Private Consultant',
+                    company: 'Various European Police Forces',
+                    companyURL: '',
+                    location: 'Paris, Vienna, Montpellier',
+                    startDate: 'Jan 1891',
+                    endDate: 'Jan 1894',
+                    bullets: [
+                        'Operated under the alias Sigerson while assisting French, Austrian and Italian authorities with unsolved cases during sabbatical period',
+                        'Disrupted a major international smuggling ring operating across three countries using forensic linguistics and handwriting analysis',
+                        'Trained local investigators in systematic deduction methodology subsequently adopted as standard practice',
+                    ],
+                },
             ],
         },
         {
@@ -187,9 +203,26 @@ export default function App() {
                         'Or remove them entirely and just use the text field above',
                     ],
                 },
+                {
+                    id: 2,
+                    subheading: 'Languages',
+                    linkLabel: '',
+                    link: '',
+                    text: 'Fluent: English, French, German. Working knowledge: Italian, Norwegian, Dutch. Basic: Japanese (self-taught during sabbatical).',
+                    bullets: [],
+                },
             ],
         },
     ])
+
+
+    function handleCvSettingsChange(field, value) {
+        setCvSettings({ ...cvSettings, [field]: value })
+    }
+
+    function handlePersonalInfoChange(field, value) {
+        setPersonalInfo({ ...personalInfo, [field]: value })
+    }
 
     return (
         <div className="app">
@@ -203,7 +236,18 @@ export default function App() {
                     {formOpen ? '←' : '→'}
                 </button>
                 {formOpen && (
-                    <div className="form-content">{/* forms go here */}</div>
+                    <div className="form-content">{/* forms go here */}
+                        <CVSettingsForm
+                            cvSettings={cvSettings}
+                            onCvSettingsChange={handleCvSettingsChange}
+                            
+                        />
+                        <HeaderForm
+                            personalInfo={personalInfo}
+                            onPersonalInfoChange={handlePersonalInfoChange}
+                        />
+                    </div>
+
                 )}
             </div>
             <div className="preview-panel">

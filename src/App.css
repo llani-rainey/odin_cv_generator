@@ -40,7 +40,7 @@ body {
     cursor: pointer;
     font-size: 1.2em;
     width: 100%;
-    text-align: center;
+    text-align: right;
     padding: 5px 0;
     margin-bottom: 10px;
 }
@@ -68,21 +68,15 @@ body {
     border: 1px solid black;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
     flex-shrink: 0;
-}
-
-.cv-page h2 {
-    font-size: 1.3em;
-}
-
-.cv-page h3 {
-    font-size: 1.1em;
+    text-align: justify;
 }
 
 .cv-header {
     display: flex;
     justify-content: space-between;
     align-items: stretch;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
+    text-align: left;
 }
 
 .cv-header-left {
@@ -99,7 +93,7 @@ body {
 }
 
 .cv-name {
-    font-size: 3.2em;
+    font-size: 3.8em;
     margin: 0;
     padding: 0;
     letter-spacing: 0.02em;
@@ -107,29 +101,9 @@ body {
 }
 
 .cv-subtitle {
-    font-size: 1.1em;
+    font-size: 1.2em;
     margin: 0;
     padding: 0;
-}
-
-.cv-section-title {
-    font-size: 1.3em;
-    font-weight: bold;
-    margin-bottom: 2px;
-}
-
-.cv-entry-subheading {
-    font-weight: bold;
-    margin-bottom: 2px;
-}
-
-.cv-generic-bullets {
-    padding-left: 20px;
-    margin-bottom: 4px;
-}
-
-.cv-generic-bullets li {
-    margin-bottom: 2px;
 }
 
 .cv-section {
@@ -140,6 +114,74 @@ body {
     margin-top: 4px;
 }
 
+.cv-section-line {
+    border: none;
+    border-top: 1px solid black;
+    margin-bottom: 6px;
+}
+
+.cv-section-title {
+    font-size: 1.3em;
+    font-weight: bold;
+    margin-bottom: 3px;
+    text-align: left;
+}
+
 .cv-section-entries {
-    margin-top: 6px;
+    margin-top: 2px;
+}
+
+.cv-generic-entry {
+    margin-bottom: 4px;
+}
+
+.cv-entry-subheading {
+    margin-bottom: 1px;
+    text-align: left;
+}
+
+.cv-entry-text {
+    margin-bottom: 1px;
+    margin-top: 0px;
+}
+
+.cv-generic-bullets,
+.cv-experience-bullets,
+.cv-education-bullets {
+    padding-left: 20px;
+    margin-bottom: 1px;
+    margin-top: 1px;
+    text-align: left;
+}
+
+.cv-generic-bullets li,
+.cv-experience-bullets li,
+.cv-education-bullets li {
+    margin-bottom: 1px;
+}
+
+.cv-experience-entry {
+    margin-bottom: 6px;
+}
+
+.cv-experience-entry-main-line {
+    margin-bottom: 1px;
+    text-align: left;
+}
+
+.cv-education-entry {
+    margin-bottom: 6px;
+}
+
+.cv-education-entry-main-line {
+    margin-bottom: 1px;
+    text-align: left;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: 2px solid #4a90d9;
+    outline-offset: 2px;
+    border-radius: 3px;
 }
