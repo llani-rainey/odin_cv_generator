@@ -544,3 +544,54 @@ Good call — let's style the form panel properly first. Add this to your `App.c
     page-break-inside: avoid;
 }
 
+.form-bullet-row button,
+.form-link-entry button {
+    background: #2a1a1a;
+    border: 1px solid #663333;
+    color: #ff6b6b;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    flex-shrink: 0;
+    transition: background 0.2s ease;
+}
+
+.form-bullet-row button:hover,
+.form-link-entry button:hover {
+    background: #3a2020;
+}
+
+/* Add buttons — green */
+.btn-add {
+    background: #1a2a1a;
+    border: 1px solid #3a6a3a;
+    color: #6abf6a;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    width: 100%;
+    transition: background 0.2s ease;
+}
+
+.btn-add:hover {
+    background: #223322;
+}
+
+/* Delete buttons — red */
+.btn-delete {
+    background: #2a1a1a;
+    border: 1px solid #663333;
+    color: #ff6b6b;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    width: 100%;
+    transition: background 0.2s ease;
+}
+
+.btn-delete:hover {
+    background: #3a2020;
+}

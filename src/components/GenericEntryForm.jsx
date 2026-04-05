@@ -222,18 +222,26 @@ export default function GenericEntryForm({ section, sections, setSections }) {
                                 </button>
                             </div>
                         ))}
-                        <button onClick={() => handleAddBullet(entry.id)}>
+                        <button
+                            className="btn-add"
+                            onClick={() => handleAddBullet(entry.id)}
+                        >
                             + Add Bullet
                         </button>
                     </div>
 
-                    <button onClick={() => handleDeleteEntry(entry.id)}>
+                    <button
+                        className="btn-delete"
+                        onClick={() => handleDeleteEntry(entry.id)}
+                    >
                         Delete Entry
                     </button>
                 </div>
             ))}
 
-            <button onClick={handleAddEntry}>+ Add Entry</button>
+            <button className="btn-add" onClick={handleAddEntry}>
+                + Add Entry
+            </button>
         </div>
     )
 }

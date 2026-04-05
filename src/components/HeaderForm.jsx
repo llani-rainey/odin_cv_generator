@@ -62,7 +62,9 @@ export default function HeaderForm({ personalInfo, setPersonalInfo }) {
                         id="location"
                         type="text"
                         value={personalInfo.location}
-                        onChange={(e) => handleChange('location', e.target.value)}
+                        onChange={(e) =>
+                            handleChange('location', e.target.value)
+                        }
                         onFocus={(e) => e.target.select()}
                         placeholder="e.g. London"
                     />
@@ -95,7 +97,9 @@ export default function HeaderForm({ personalInfo, setPersonalInfo }) {
                         id="address"
                         type="text"
                         value={personalInfo.address}
-                        onChange={(e) => handleChange('address', e.target.value)}
+                        onChange={(e) =>
+                            handleChange('address', e.target.value)
+                        }
                         placeholder="Your address"
                     />
                 </div>
@@ -139,12 +143,17 @@ export default function HeaderForm({ personalInfo, setPersonalInfo }) {
                             onFocus={(e) => e.target.select()}
                             placeholder="URL e.g. https://github.com/..."
                         />
-                        <button onClick={() => handleDeleteLink(link.id)}>
+                        <button
+                            
+                            onClick={() => handleDeleteLink(link.id)}
+                        >
                             ×
                         </button>
                     </div>
                 ))}
-                <button onClick={handleAddLink}>+ Add Link</button>
+                <button className="btn-add" onClick={handleAddLink}>
+                    + Add Link
+                </button>
             </div>
         </div>
     )
