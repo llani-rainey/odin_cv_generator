@@ -198,14 +198,15 @@ Good call — let's style the form panel properly first. Add this to your `App.c
 }
 
 .form-section-title {
-    font-size: 0.85em;
+    font-size: 0.8em;
     font-weight: bold;
-    color: #ffffff;
+    color: #4a90d9;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.08em;
     margin-bottom: 12px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid #444;
+    padding: 6px 0 6px 10px;
+    border-left: 3px solid #4a90d9;
+    border-bottom: none;
 }
 
 .form-generic-section,
@@ -405,13 +406,13 @@ Good call — let's style the form panel properly first. Add this to your `App.c
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 0 12px 0;
+    padding: 16px 0 12px 0;
     margin-bottom: 4px;
     border-bottom: 1px solid #333;
 }
 
 .form-panel-logo {
-    font-size: 1.2em;
+    font-size: 1.5em;
     font-weight: bold;
     color: #4a90d9;
     letter-spacing: 0.05em;
@@ -420,7 +421,6 @@ Good call — let's style the form panel properly first. Add this to your `App.c
 .form-settings {
     padding-top: 12px;
     padding-bottom: 16px;
-    border-bottom: 1px solid #333;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -433,3 +433,114 @@ Good call — let's style the form panel properly first. Add this to your `App.c
     margin-bottom: 16px;
     padding-bottom: 16px;
 }
+
+.btn-export {
+    background: #1a2a3a;
+    border: 1px solid #3a6a9a;
+    color: #4a90d9;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: normal;
+}
+
+.btn-export:hover {
+    background: #1f3347;
+}
+
+.form-import-panel {
+    padding: 10px 0 14px 0;
+    border-bottom: 1px solid #333;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-import-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+}
+
+.btn-import {
+    background: #2a3a2a;
+    border: 1px solid #3a6a3a;
+    color: #6abf6a;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    flex: 1;
+}
+
+.btn-import:hover {
+    background: #334433;
+}
+
+.btn-import-toggle {
+    background: #2a2a3a;
+    border: 1px solid #3a3a6a;
+    color: #6a6abf;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    flex: 1;
+}
+
+.btn-import-toggle:hover {
+    background: #333344;
+}
+
+.form-import-box {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-import-box textarea {
+    width: 100%;
+    background: #1a1a1a;
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #ffffff;
+    padding: 8px;
+    font-size: 0.85em;
+    box-sizing: border-box;
+    resize: vertical;
+}
+
+.btn-import-run {
+    background: #4a90d9;
+    border: none;
+    color: white;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: bold;
+}
+
+.btn-import-run:hover {
+    background: #357abd;
+}
+
+.cv-name {
+    font-size: 3.2em;
+    margin: 0;
+    padding: 0;
+    letter-spacing: 0.02em;
+    line-height: 1;
+}
+
+.cv-section {
+    page-break-inside: avoid;
+}
+
+.cv-experience-entry,
+.cv-education-entry,
+.cv-generic-entry {
+    page-break-inside: avoid;
+}
+

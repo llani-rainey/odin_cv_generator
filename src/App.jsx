@@ -1,3 +1,4 @@
+import html2pdf from 'html2pdf.js'
 import { useState } from 'react'
 import Header from './components/Header'
 import Section from './components/Section'
@@ -8,7 +9,10 @@ import GenericEntryForm from './components/GenericEntryForm'
 import ExperienceEntryForm from './components/ExperienceEntryForm'
 import EducationEntryForm from './components/EducationEntryForm'
 
+
 export default function App() {
+    const [importJson, setImportJson] = useState('')
+    const [showImport, setShowImport] = useState(false)
     const [formOpen, setFormOpen] = useState(true)
 
     const [personalInfo, setPersonalInfo] = useState({
@@ -220,12 +224,231 @@ export default function App() {
         setCvSettings({ ...cvSettings, [field]: value })
     }
 
+    function handleExportPDF() {
+        const element = document.querySelector('.cv-page')
+        element.style.minHeight = 'unset'
+
+        const options = {
+            margin: 0,
+            filename: 'cv.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+        }
+
+        html2pdf()
+            .set(options)
+            .from(element)
+            .save()
+            .then(() => {
+                element.style.minHeight = '1123px'
+            })
+    }
+
+    const importPrompt = `You are helping populate a CV builder app. I will provide you with my existing CV content. Your job is to extract and map my information to the exact JSON structure below.
+
+    CRITICAL RULES:
+    - Return ONLY the JSON object. No markdown, no backticks, no explanation, no other text whatsoever.
+    - Every field must be present even if empty — use "" for empty strings and [] for empty arrays.
+    - Do not invent or assume information that is not in my CV.
+    - Preserve my exact wording where possible.
+
+    DATA STRUCTURE RULES:
+
+    personalInfo:
+    - name: full name as written
+    - title: job title or professional headline
+    - location: city or city + country
+    - phone: phone number as written
+    - email: email address
+    - address: full address if provided
+    - visaStatus: visa/citizenship/working rights if mentioned
+    - links: array of { id, label, url }
+    * These are the profile/social links shown in the CV header (e.g. GitHub, LinkedIn, personal website)
+    * label: short display name e.g. "GitHub", "LinkedIn", "Portfolio" — NOT the full URL
+    * url: the full URL e.g. "https://github.com/username"
+    * IMPORTANT: If the CV contains clickable hyperlinks or underlined text with an underlying URL (e.g. the word "GitHub" links to https://github.com/username), extract the actual underlying URL — do not just use the display text as the URL
+    * If the document has a LinkedIn or GitHub hyperlink, extract the real URL even if it is not written out in full
+
+    sections — there are 4 section types:
+
+    1. GENERIC sections (type: "generic") — used for Summary, Projects, Skills, Custom sections:
+    - Each entry has: id, subheading, linkLabel, link, text, bullets
+    - subheading: the project/skill name or sub-section title (empty string "" for Summary)
+    - linkLabel: short display label for the link e.g. "GitHub" — this is the clickable text that appears after the subheading
+    - link: the full URL that the linkLabel points to e.g. "https://github.com/username/project"
+    * IMPORTANT: If the subheading has an underlying hyperlink (e.g. the project name is clickable), extract the actual URL into the link field
+    - text: paragraph text. For Summary use this for the main body paragraph. For all other sections PREFER bullets over text — only use text if the information genuinely does not suit bullet points
+    - bullets: array of strings, one per bullet point. PREFER bullets over text for projects, skills, training, certifications etc. Convert paragraph descriptions into bullet points where it makes sense.
+
+    2. EXPERIENCE sections (type: "experience") — used for Work Experience:
+    - Each entry has: id, jobTitle, company, companyURL, location, startDate, endDate, bullets
+    - companyURL: if the company name is a hyperlink in the CV, extract the underlying URL. Otherwise use ""
+    - startDate/endDate: format as written e.g. "Jan 2020" or "2020" or "Present"
+    - bullets: array of strings, one per bullet point. ALWAYS use bullets for experience entries — never put experience descriptions in a text field.
+
+    3. EDUCATION sections (type: "education") — used for Education:
+    - Each entry has: id, degree, institution, institutionURL, link, startDate, endDate, text, bullets
+    - link: if the institution name is a hyperlink, extract the underlying URL. Otherwise infer the institution website if well known (e.g. "https://www.cam.ac.uk" for University of Cambridge), otherwise ""
+    - institutionURL: leave as "" (deprecated field)
+    - text: short description or note below the degree line if present
+    - bullets: use bullets for awards, relevant papers, achievements etc. PREFER bullets over text.
+
+    4. You may add additional generic sections if my CV has sections that don't fit the above (e.g. Certifications, Technical Training, Languages, Interests).
+
+    LINK EXTRACTION — IMPORTANT:
+    - Many CVs have hyperlinked text where the display text (e.g. "GitHub") hides the actual URL underneath
+    - If you can see or infer the underlying URL from context, extract it into the appropriate url/link field
+    - For GitHub: if a username is mentioned anywhere, construct the URL as https://github.com/username
+    - For LinkedIn: if a profile is mentioned, construct as https://linkedin.com/in/username if the username is visible
+    - Never use a display label as the URL value — urls must always start with https://
+
+    FORMATTING PREFERENCES:
+    - Summary: use the text field for the main paragraph. Bullets are optional for summary.
+    - Everything else: STRONGLY prefer bullets over text. Convert prose descriptions into concise bullet points.
+    - Keep bullet points concise and achievement-focused where possible.
+
+    ORDERING:
+    - Keep sections in the same order as they appear in my CV.
+    - Keep entries within each section in the same order as they appear.
+
+    IDs:
+    - Use sequential integers for all ids starting from 1.
+    - Section ids: 1, 2, 3, 4 etc.
+    - Entry ids within each section: 1, 2, 3 etc. (reset per section)
+
+    Return this exact structure:
+
+    {
+    "personalInfo": {
+        "name": "",
+        "title": "",
+        "location": "",
+        "phone": "",
+        "email": "",
+        "address": "",
+        "visaStatus": "",
+        "links": [
+        { "id": "1", "label": "GitHub", "url": "" },
+        { "id": "2", "label": "LinkedIn", "url": "" }
+        ]
+    },
+    "sections": [
+        {
+        "id": 1,
+        "type": "generic",
+        "title": "Summary",
+        "entries": [
+            {
+            "id": 1,
+            "subheading": "",
+            "linkLabel": "",
+            "link": "",
+            "text": "",
+            "bullets": []
+            }
+        ]
+        },
+        {
+        "id": 2,
+        "type": "generic",
+        "title": "Projects / Technical Skills",
+        "entries": [
+            {
+            "id": 1,
+            "subheading": "",
+            "linkLabel": "",
+            "link": "",
+            "text": "",
+            "bullets": []
+            }
+        ]
+        },
+        {
+        "id": 3,
+        "type": "experience",
+        "title": "Work Experience",
+        "entries": [
+            {
+            "id": 1,
+            "jobTitle": "",
+            "company": "",
+            "companyURL": "",
+            "location": "",
+            "startDate": "",
+            "endDate": "",
+            "bullets": []
+            }
+        ]
+        },
+        {
+        "id": 4,
+        "type": "education",
+        "title": "Education",
+        "entries": [
+            {
+            "id": 1,
+            "degree": "",
+            "institution": "",
+            "institutionURL": "",
+            "link": "",
+            "startDate": "",
+            "endDate": "",
+            "text": "",
+            "bullets": []
+            }
+        ]
+        }
+    ]
+    }
+
+Now please map my CV content to this structure. Here is my CV:`
+
+    function handleCopyPrompt() {
+        navigator.clipboard.writeText(importPrompt)
+        alert(
+            'Prompt copied to clipboard! Paste it into Claude or ChatGPT, then upload or paste your CV.',
+        )
+    }
+
+    function handleImport(jsonString) {
+        try {
+            const cleaned = jsonString
+                .replace(/```json/g, '')
+                .replace(/```/g, '')
+                .replace(/[\u2018\u2019]/g, "'") // smart single quotes
+                .replace(/[\u201C\u201D]/g, '"') // smart double quotes
+                .replace(/^\s+|\s+$/g, '') // trim whitespace
+                .trim()
+
+            console.log('Attempting to parse:', cleaned.substring(0, 100))
+            const data = JSON.parse(cleaned)
+
+            if (
+                window.confirm(
+                    'This will replace all your current CV data. Continue?',
+                )
+            ) {
+                setPersonalInfo(data.personalInfo)
+                setSections(data.sections)
+            }
+        } catch (e) {
+            console.error('Parse error:', e)
+            alert(`Invalid JSON — Error: ${e.message}`)
+        }
+    }
+
 
     return (
         <div className="app">
-            <div className={`form-panel ${formOpen ? '' : 'form-panel--collapsed'}`}>
+            <div
+                className={`form-panel ${formOpen ? '' : 'form-panel--collapsed'}`}
+            >
                 <div className="form-panel-header">
-                    {formOpen && <span className="form-panel-logo">CV Builder</span>}
+                    {formOpen && (
+                        <span className="form-panel-logo">CV Builder</span>
+                    )}
                     <button
                         className="collapse-btn"
                         onClick={() => setFormOpen(!formOpen)}
@@ -233,9 +456,57 @@ export default function App() {
                         {formOpen ? '←' : '→'}
                     </button>
                 </div>
+
+                {formOpen && (
+                    <div className="form-import-panel">
+                        <div className="form-import-buttons">
+                            <button
+                                className="btn-import"
+                                onClick={handleCopyPrompt}
+                                title="Copies a prompt to your clipboard. Paste it into Claude or ChatGPT or your AI of choice along with your existing CV to generate importable JSON then click Paste JSON to autopopulate the template."
+                            >
+                                📋 Copy AI Prompt
+                            </button>
+                            <button
+                                className="btn-import-toggle"
+                                onClick={() => setShowImport(!showImport)}
+                                title="After getting JSON from the AI, paste it here to automatically populate all your CV fields."
+                            >
+                                {showImport ? 'Hide Import' : 'Paste JSON'}
+                            </button>
+                            <button
+                                className="btn-export"
+                                onClick={handleExportPDF}
+                                title="Export your CV as a PDF file."
+                            >
+                                Export PDF
+                            </button>
+                        </div>
+                        {showImport && (
+                            <div className="form-import-box">
+                                <textarea
+                                    value={importJson}
+                                    onChange={(e) => setImportJson(e.target.value)}
+                                    placeholder="Paste the JSON response from the AI here..."
+                                    rows={6}
+                                />
+                                <button
+                                    className="btn-import-run"
+                                    onClick={() => {
+                                        handleImport(importJson)
+                                        setImportJson('')
+                                        setShowImport(false)
+                                    }}
+                                >
+                                    Import CV Data
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {formOpen && (
                     <div className="form-content">
-                        {/* forms go here */}
                         <CVSettingsForm
                             cvSettings={cvSettings}
                             onCvSettingsChange={handleCvSettingsChange}
@@ -278,9 +549,6 @@ export default function App() {
                 )}
             </div>
             <div className="preview-panel">
-                {/* toolbar sits here — above the CV page */}
-
-                {/* cv page sits below the toolbar */}
                 <div
                     className="cv-page"
                     style={{
@@ -290,8 +558,8 @@ export default function App() {
                             cvSettings.margins === 'narrow'
                                 ? '40px 50px'
                                 : cvSettings.margins === 'moderate'
-                                  ? '56px 72px'
-                                  : '72px 96px',
+                                ? '56px 72px'
+                                : '72px 96px',
                         '--accent-color': cvSettings.accentColor,
                     }}
                 >
