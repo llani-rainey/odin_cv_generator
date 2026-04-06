@@ -1,18 +1,20 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+
 class CV(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    # Personal Info - Matching your 'personalInfo' state
-    name = models.CharField(max_length=255) # changed from full_name to match React
-    title = models.CharField(max_length=255)
-    location = models.CharField(max_length=255)
-    phone = models.CharField(max_length=50)
-    email = models.EmailField(max_length=254)
-    address = models.TextField(blank=True)
-    visa_status = models.CharField(max_length=255, blank=True) # matches visaStatus
 
-    # Style Settings - Matching your 'cvSettings' state
+    # Personal Info
+    name = models.CharField(max_length=255, blank=True)
+    title = models.CharField(max_length=255, blank=True)
+    location = models.CharField(max_length=255, blank=True)
+    phone = models.CharField(max_length=50, blank=True)
+    email = models.EmailField(max_length=254, blank=True)
+    address = models.TextField(blank=True)
+    visa_status = models.CharField(max_length=255, blank=True)
+
+    # CV Settings
     font = models.CharField(max_length=100, default='Arial')
     font_size = models.CharField(max_length=50, default='11px')
     margins = models.CharField(max_length=50, default='narrow')
@@ -21,56 +23,76 @@ class CV(models.Model):
     def __str__(self):
         return f"CV of {self.name}"
 
+
 class HeaderLink(models.Model):
     cv = models.ForeignKey(CV, related_name='links', on_delete=models.CASCADE)
-    label = models.CharField(max_length=100)
-    url = models.URLField()
+    label = models.CharField(max_length=100, blank=True)
+    url = models.URLField(blank=True)
+    order = models.PositiveIntegerField(default=0)
+    class Meta:
+        ordering = ['order']  # add this
+
+    def __str__(self):
+        return f"{self.label} ({self.url})"
+
 
 class Section(models.Model):
     SECTION_TYPES = (
-        ('generic', 'Generic'),
+        ('generic', 'Generic'), //db_value i.e what gets stored in the db column, display value i.e what shows in Django admin UI
         ('experience', 'Experience'),
         ('education', 'Education'),
     )
     cv = models.ForeignKey(CV, related_name='sections', on_delete=models.CASCADE)
-    title = models.CharField(max_length=255)
+    title = models.CharField(max_length=255, blank=True)
     type = models.CharField(max_length=20, choices=SECTION_TYPES)
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ['order']
 
+    def __str__(self):
+        return f"{self.title} ({self.type})"
+
+
 class Entry(models.Model):
     section = models.ForeignKey(Section, related_name='entries', on_delete=models.CASCADE)
     order = models.PositiveIntegerField(default=0)
 
-    # Experience Fields
-    job_title = models.CharField(max_length=255, blank=True) # jobTitle
+    # Experience fields
+    job_title = models.CharField(max_length=255, blank=True)
     company = models.CharField(max_length=255, blank=True)
-    company_url = models.URLField(blank=True) # companyURL
-    
-    # Education Fields
+    company_url = models.URLField(blank=True)
+
+    # Education fields
     degree = models.CharField(max_length=255, blank=True)
     institution = models.CharField(max_length=255, blank=True)
-    
-    # Generic Fields
+    institution_url = models.URLField(blank=True)
+
+    # Generic fields
     subheading = models.CharField(max_length=255, blank=True)
-    link_label = models.CharField(max_length=100, blank=True) # linkLabel
-    
-    # Shared Fields
+    link_label = models.CharField(max_length=100, blank=True)
+    link_url = models.URLField(blank=True)
+
+    # Shared fields
     location = models.CharField(max_length=255, blank=True)
-    start_date = models.CharField(max_length=100, blank=True) # startDate
-    end_date = models.CharField(max_length=100, blank=True) # endDate
+    start_date = models.CharField(max_length=100, blank=True)
+    end_date = models.CharField(max_length=100, blank=True)
     text = models.TextField(blank=True)
-    link_url = models.URLField(blank=True) # link (Used in Education & Generic)
 
     class Meta:
         ordering = ['order']
 
+    def __str__(self):
+        return self.job_title or self.degree or self.subheading or f"Entry {self.id}"
+
+
 class Bullet(models.Model):
     entry = models.ForeignKey(Entry, related_name='bullets', on_delete=models.CASCADE)
-    text = models.TextField()
+    text = models.TextField(blank=True)
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ['order']
+
+    def __str__(self):
+        return self.text[:50]
