@@ -438,7 +438,24 @@ Now please map my CV content to this structure. Here is my CV:`
             alert(`Invalid JSON — Error: ${e.message}`)
         }
     }
+    
+    function handleDeleteSection(sectionId) {
+        if (window.confirm('Delete this entire section?')) {
+            setSections(sections.filter((s) => s.id !== sectionId))
+        }
+    }
 
+    function handleAddSection() {
+        setSections([
+            ...sections,
+            {
+                id: crypto.randomUUID(),
+                type: 'generic',
+                title: 'New Section',
+                entries: [],
+            },
+        ])
+    }
 
     return (
         <div className="app">
@@ -486,7 +503,9 @@ Now please map my CV content to this structure. Here is my CV:`
                             <div className="form-import-box">
                                 <textarea
                                     value={importJson}
-                                    onChange={(e) => setImportJson(e.target.value)}
+                                    onChange={(e) =>
+                                        setImportJson(e.target.value)
+                                    }
                                     placeholder="Paste the JSON response from the AI here..."
                                     rows={6}
                                 />
@@ -523,6 +542,7 @@ Now please map my CV content to this structure. Here is my CV:`
                                         section={section}
                                         sections={sections}
                                         setSections={setSections}
+                                        onDeleteSection={handleDeleteSection}
                                     />
                                 )
                             }
@@ -533,6 +553,7 @@ Now please map my CV content to this structure. Here is my CV:`
                                         section={section}
                                         sections={sections}
                                         setSections={setSections}
+                                        onDeleteSection={handleDeleteSection}
                                     />
                                 )
                             }
@@ -542,9 +563,13 @@ Now please map my CV content to this structure. Here is my CV:`
                                     section={section}
                                     sections={sections}
                                     setSections={setSections}
+                                    onDeleteSection={handleDeleteSection}
                                 />
                             )
                         })}
+                        <button className="btn-add" onClick={handleAddSection}>
+                            + Add Section
+                        </button>
                     </div>
                 )}
             </div>

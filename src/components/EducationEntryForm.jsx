@@ -1,4 +1,9 @@
-export default function EducationEntryForm({ section, sections, setSections }) {
+export default function EducationEntryForm({
+    section,
+    sections,
+    setSections,
+    onDeleteSection,
+}) {
     function handleEntryChange(entryId, field, value) {
         const updated = sections.map((s) => {
             if (s.id !== section.id) return s
@@ -100,9 +105,30 @@ export default function EducationEntryForm({ section, sections, setSections }) {
         setSections(updated)
     }
 
+    function handleTitleChange(value) {
+        const updated = sections.map((s) =>
+            s.id === section.id ? { ...s, title: value } : s,
+        )
+        setSections(updated)
+    }
+
     return (
         <div className="form-education-section">
-            <h3 className="form-section-title">{section.title}</h3>
+            <div className="form-section-header">
+                <input
+                    className="form-section-title-input"
+                    type="text"
+                    value={section.title}
+                    onChange={(e) => handleTitleChange(e.target.value)}
+                    onFocus={(e) => e.target.select()}
+                />
+                <button
+                    className="btn-delete-section"
+                    onClick={() => onDeleteSection(section.id)}
+                >
+                    ✕
+                </button>
+            </div>
 
             {section.entries.map((entry) => (
                 <div key={entry.id} className="form-education-entry">
@@ -227,7 +253,6 @@ export default function EducationEntryForm({ section, sections, setSections }) {
                                     placeholder="Bullet point"
                                 />
                                 <button
-                                    
                                     onClick={() =>
                                         handleDeleteBullet(entry.id, index)
                                     }

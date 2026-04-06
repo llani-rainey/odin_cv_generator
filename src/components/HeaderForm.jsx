@@ -117,6 +117,8 @@ export default function HeaderForm({ personalInfo, setPersonalInfo }) {
                 />
             </div>
 
+            
+
             <div className="form-links">
                 <label>Links</label>
                 {personalInfo.links.map((link) => (

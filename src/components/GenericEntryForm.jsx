@@ -1,4 +1,9 @@
-export default function GenericEntryForm({ section, sections, setSections }) {
+export default function GenericEntryForm({
+    section,
+    sections,
+    setSections,
+    onDeleteSection,
+}) {
     function handleEntryChange(entryId, field, value) {
         setSections(
             sections.map((s) =>
@@ -121,9 +126,31 @@ export default function GenericEntryForm({ section, sections, setSections }) {
         )
     }
 
+    function handleTitleChange(value) {
+        setSections(
+            sections.map((s) =>
+                s.id === section.id ? { ...s, title: value } : s,
+            ),
+        )
+    }
+
     return (
         <div className="form-generic-section">
-            <h3 className="form-section-title">{section.title}</h3>
+            <div className="form-section-header">
+                <input
+                    className="form-section-title-input"
+                    type="text"
+                    value={section.title}
+                    onChange={(e) => handleTitleChange(e.target.value)}
+                    onFocus={(e) => e.target.select()}
+                />
+                <button
+                    className="btn-delete-section"
+                    onClick={() => onDeleteSection(section.id)}
+                >
+                    ✕
+                </button>
+            </div>
 
             {section.entries.map((entry) => (
                 <div key={entry.id} className="form-generic-entry">

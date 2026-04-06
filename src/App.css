@@ -1,4 +1,9 @@
-* {
+Looking at your CSS there are duplicate and conflicting rules — two `.btn-add`,
+two `.btn-delete`,
+two `.cv-name` etc. Here's the cleaned up full CSS:
+
+
+```css * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -33,375 +38,6 @@ body {
     padding: 10px 5px;
 }
 
-.collapse-btn {
-    background: none;
-    border: none;
-    color: white;
-    cursor: pointer;
-    font-size: 1.2em;
-    padding: 0;
-    margin: 0;
-}
-
-.collapse-btn:hover {
-    color: #aaa;
-}
-
-.preview-panel {
-    flex: 1;
-    background: #f0f0f0;
-    padding: 30px;
-    overflow: auto;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-}
-
-.cv-page {
-    width: 794px;
-    min-width: 794px;
-    min-height: 1123px;
-    background: white;
-    box-sizing: border-box;
-    border: 1px solid black;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-    flex-shrink: 0;
-    text-align: justify;
-}
-
-.cv-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: stretch;
-    margin-bottom: 10px;
-    text-align: left;
-}
-
-.cv-header-left {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
-
-.cv-header-right {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    text-align: right;
-}
-
-.cv-name {
-    font-size: 3.8em;
-    margin: 0;
-    padding: 0;
-    letter-spacing: 0.02em;
-    line-height: 1;
-}
-
-.cv-subtitle {
-    font-size: 1.2em;
-    margin: 0;
-    padding: 0;
-}
-
-.cv-section {
-    margin-bottom: 10px;
-}
-
-.cv-section:first-child {
-    margin-top: 4px;
-}
-
-.cv-section-line {
-    border: none;
-    border-top: 1px solid var(--accent-color, black);
-    margin-bottom: 6px;
-}
-
-.cv-section-title {
-    font-size: 1.3em;
-    font-weight: bold;
-    margin-bottom: 3px;
-    text-align: left;
-}
-
-.cv-section-entries {
-    margin-top: 2px;
-}
-
-.cv-generic-entry {
-    margin-bottom: 4px;
-}
-
-.cv-entry-subheading {
-    margin-bottom: 1px;
-    text-align: left;
-}
-
-.cv-entry-text {
-    margin-bottom: 1px;
-    margin-top: 0px;
-}
-
-.cv-generic-bullets,
-.cv-experience-bullets,
-.cv-education-bullets {
-    padding-left: 20px;
-    margin-bottom: 1px;
-    margin-top: 1px;
-    text-align: left;
-}
-
-.cv-generic-bullets li,
-.cv-experience-bullets li,
-.cv-education-bullets li {
-    margin-bottom: 1px;
-}
-
-.cv-experience-entry {
-    margin-bottom: 6px;
-}
-
-.cv-experience-entry-main-line {
-    margin-bottom: 1px;
-    text-align: left;
-}
-
-.cv-education-entry {
-    margin-bottom: 6px;
-}
-
-.cv-education-entry-main-line {
-    margin-bottom: 1px;
-    text-align: left;
-}
-
-input:focus,
-select:focus,
-textarea:focus {
-    outline: 2px solid #4a90d9;
-    outline-offset: 2px;
-    border-radius: 3px;
-}
-
-Good call — let's style the form panel properly first. Add this to your `App.css`:
-
-```css
-
-/* Form Panel General */
-.form-content {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    padding-bottom: 40px;
-    padding-top: 8px;
-}
-
-.form-section-title {
-    font-size: 0.8em;
-    font-weight: bold;
-    color: #4a90d9;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 12px;
-    padding: 6px 0 6px 10px;
-    border-left: 3px solid #4a90d9;
-    border-bottom: none;
-}
-
-.form-generic-section,
-.form-experience-section,
-.form-education-section {
-    border-top: 1px solid #333;
-    padding-top: 16px;
-    margin-top: 8px;
-}
-
-/* Individual form sections */
-.form-settings,
-.form-header,
-.form-generic-section,
-.form-experience-section,
-.form-education-section {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-/* Two column layout for form fields */
-.form-fields-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-}
-
-/* Individual entries within a section */
-.form-generic-entry,
-.form-experience-entry,
-.form-education-entry {
-    background: #2a2a2a;
-    border: 1px solid #444;
-    border-radius: 6px;
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 8px;
-}
-
-/* Field label + input pairs */
-.form-field {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.form-field label {
-    font-size: 0.75em;
-    color: #aaa;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 2px;
-}
-
-/* All inputs, textareas, selects */
-.form-content input[type='text'],
-.form-content input[type='email'],
-.form-content input[type='color'],
-.form-content select,
-.form-content textarea {
-    width: 100%;
-    background: #1a1a1a;
-    border: 1px solid #555;
-    border-radius: 4px;
-    color: #ffffff;
-    padding: 8px 10px;
-    font-size: 0.9em;
-    font-family: inherit;
-    box-sizing: border-box;
-}
-
-.form-content input[type='text']:focus,
-.form-content input[type='email']:focus,
-.form-content select:focus,
-.form-content textarea:focus {
-    outline: none;
-    border-color: #4a90d9;
-}
-
-.form-content textarea {
-    resize: vertical;
-    min-height: 70px;
-}
-
-/* Radio groups */
-.form-radio-group {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-}
-
-.form-radio-group label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.9em;
-    color: #ffffff;
-    cursor: pointer;
-    text-transform: none;
-    letter-spacing: 0;
-}
-
-/* Links section */
-.form-links {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 8px;
-}
-
-.form-links>label {
-    font-size: 0.75em;
-    color: #aaa;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.form-link-entry {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-}
-
-.form-link-entry input {
-    flex: 1;
-}
-
-/* Bullet rows */
-.form-bullet-row {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    margin-bottom: 4px;
-}
-
-.form-bullet-row input {
-    flex: 1;
-}
-
-/* Buttons */
-.form-content button {
-    background: #2a2a2a;
-    border: 1px solid #555;
-    color: #ffffff;
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.85em;
-    transition: background 0.2s ease;
-    text-align: center;
-}
-
-.form-content button:hover {
-    background: #3a3a3a;
-}
-
-/* Delete buttons — red tint */
-.btn-delete {
-    color: #ff6b6b !important;
-    border-color: #663333 !important;
-    background: #2a1a1a !important;
-}
-
-.btn-delete:hover {
-    background: #3a2020 !important;
-}
-
-/* Add buttons — blue tint */
-.btn-add {
-    color: #4a90d9 !important;
-    border-color: #1a3a5c !important;
-    background: #1a2a3a !important;
-}
-
-.btn-add:hover {
-    background: #1f3347 !important;
-}
-
-/* Colour picker */
-.form-content input[type='color'] {
-    padding: 2px;
-    height: 36px;
-    cursor: pointer;
-}
-
-/* Dates side by side */
-.form-dates-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-}
-
 .form-panel-header {
     display: flex;
     justify-content: space-between;
@@ -418,37 +54,21 @@ Good call — let's style the form panel properly first. Add this to your `App.c
     letter-spacing: 0.05em;
 }
 
-.form-settings {
-    padding-top: 12px;
-    padding-bottom: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.form-header {
-    border-top: 1px solid #333;
-    padding-top: 16px;
-    margin-top: 8px;
-    margin-bottom: 16px;
-    padding-bottom: 16px;
-}
-
-.btn-export {
-    background: #1a2a3a;
-    border: 1px solid #3a6a9a;
-    color: #4a90d9;
-    padding: 6px 14px;
-    border-radius: 4px;
+.collapse-btn {
+    background: none;
+    border: none;
+    color: white;
     cursor: pointer;
-    font-size: 0.85em;
-    font-weight: normal;
+    font-size: 1.2em;
+    padding: 0;
+    margin: 0;
 }
 
-.btn-export:hover {
-    background: #1f3347;
+.collapse-btn:hover {
+    color: #aaa;
 }
 
+/* ─── Import Panel ─── */
 .form-import-panel {
     padding: 10px 0 14px 0;
     border-bottom: 1px solid #333;
@@ -471,7 +91,6 @@ Good call — let's style the form panel properly first. Add this to your `App.c
     border-radius: 4px;
     cursor: pointer;
     font-size: 0.85em;
-    flex: 1;
 }
 
 .btn-import:hover {
@@ -486,11 +105,24 @@ Good call — let's style the form panel properly first. Add this to your `App.c
     border-radius: 4px;
     cursor: pointer;
     font-size: 0.85em;
-    flex: 1;
 }
 
 .btn-import-toggle:hover {
     background: #333344;
+}
+
+.btn-export {
+    background: #1a2a3a;
+    border: 1px solid #3a6a9a;
+    color: #4a90d9;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+}
+
+.btn-export:hover {
+    background: #1f3347;
 }
 
 .form-import-box {
@@ -526,22 +158,270 @@ Good call — let's style the form panel properly first. Add this to your `App.c
     background: #357abd;
 }
 
-.cv-name {
-    font-size: 3.2em;
-    margin: 0;
-    padding: 0;
-    letter-spacing: 0.02em;
-    line-height: 1;
+/* ─── Form Content ─── */
+.form-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding-bottom: 40px;
+    padding-top: 8px;
 }
 
-.cv-section {
-    page-break-inside: avoid;
+.form-settings {
+    padding-top: 12px;
+    padding-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
-.cv-experience-entry,
-.cv-education-entry,
-.cv-generic-entry {
-    page-break-inside: avoid;
+.form-header {
+    border-top: 1px solid #333;
+    padding-top: 16px;
+    margin-top: 8px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+}
+
+.form-generic-section,
+.form-experience-section,
+.form-education-section {
+    border-top: 1px solid #333;
+    padding-top: 16px;
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* ─── Section Header (title input + delete button) ─── */
+.form-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.form-section-title-input {
+    flex: 1;
+    background: none !important;
+    border: none !important;
+    border-left: 3px solid #4a90d9 !important;
+    border-bottom: 1px solid transparent !important;
+    color: #4a90d9 !important;
+    font-size: 0.85em;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+    padding: 6px 0 6px 10px;
+    cursor: text;
+    min-width: 0;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.form-section-title-input:focus {
+    outline: none;
+    border-bottom: 1px solid #4a90d9;
+    background: #1a2a3a;
+}
+
+.btn-delete-section {
+    background: #2a1a1a;
+    border: 1px solid #663333;
+    color: #ff6b6b;
+    font-size: 0.8em;
+    cursor: pointer;
+    padding: 4px 8px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.btn-delete-section:hover {
+    background: #3a2020;
+}
+
+/* ─── Fields ─── */
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.form-field label {
+    font-size: 0.75em;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 2px;
+}
+
+.form-fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.form-dates-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+/* ─── Inputs ─── */
+.form-content input[type='text'],
+.form-content input[type='email'],
+.form-content input[type='color'],
+.form-content select,
+.form-content textarea {
+    width: 100%;
+    background: #1a1a1a;
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #ffffff;
+    padding: 8px 10px;
+    font-size: 0.9em;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.form-content input[type='text']:focus,
+.form-content input[type='email']:focus,
+.form-content select:focus,
+.form-content textarea:focus {
+    outline: none;
+    border-color: #4a90d9;
+}
+
+.form-content textarea {
+    resize: vertical;
+    min-height: 70px;
+}
+
+.form-content input[type='color'] {
+    padding: 2px;
+    height: 36px;
+    cursor: pointer;
+}
+
+/* ─── Radio Groups ─── */
+.form-radio-group {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.form-radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9em;
+    color: #ffffff;
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* ─── Links ─── */
+.form-links {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.form-links>label {
+    font-size: 0.75em;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.form-link-entry {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.form-link-entry input {
+    flex: 1;
+    min-width: 0;
+}
+
+/* ─── Bullet Rows ─── */
+.form-bullet-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.form-bullet-row input {
+    flex: 1;
+    min-width: 0;
+}
+
+/* ─── Entry Cards ─── */
+.form-generic-entry,
+.form-experience-entry,
+.form-education-entry {
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+/* ─── Buttons ─── */
+.form-content button {
+    background: #2a2a2a;
+    border: 1px solid #555;
+    color: #ffffff;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: background 0.2s ease;
+    text-align: center;
+}
+
+.form-content button:hover {
+    background: #3a3a3a;
+}
+
+.btn-add {
+    background: #1a2a1a !important;
+    border: 1px solid #3a6a3a !important;
+    color: #6abf6a !important;
+    width: 100%;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: background 0.2s ease;
+}
+
+.btn-add:hover {
+    background: #223322 !important;
+}
+
+.btn-delete {
+    background: #2a1a1a !important;
+    border: 1px solid #663333 !important;
+    color: #ff6b6b !important;
+    width: 100%;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: background 0.2s ease;
+}
+
+.btn-delete:hover {
+    background: #3a2020 !important;
 }
 
 .form-bullet-row button,
@@ -554,6 +434,7 @@ Good call — let's style the form panel properly first. Add this to your `App.c
     cursor: pointer;
     font-size: 0.9em;
     flex-shrink: 0;
+    width: auto !important;
     transition: background 0.2s ease;
 }
 
@@ -562,36 +443,285 @@ Good call — let's style the form panel properly first. Add this to your `App.c
     background: #3a2020;
 }
 
-/* Add buttons — green */
+/* ─── Preview Panel ─── */
+.preview-panel {
+    flex: 1;
+    background: #f0f0f0;
+    padding: 30px;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+/* ─── CV Page ─── */
+.cv-page {
+    width: 794px;
+    min-width: 794px;
+    min-height: 1123px;
+    background: white;
+    box-sizing: border-box;
+    border: 1px solid black;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
+    text-align: justify;
+}
+
+
+
+.cv-section {
+    margin-bottom: 10px;
+    page-break-inside: avoid;
+}
+
+.cv-section:first-child {
+    margin-top: 4px;
+}
+
+.cv-section-title {
+    font-size: 1.3em;
+    font-weight: bold;
+    margin-bottom: 3px;
+    text-align: left;
+}
+
+.cv-section-line {
+    border: none;
+    border-top: 1px solid var(--accent-color, black);
+    margin-bottom: 6px;
+}
+
+.cv-section-entries {
+    margin-top: 2px;
+}
+
+.cv-generic-entry {
+    margin-bottom: 4px;
+}
+
+.cv-entry-subheading {
+    margin-bottom: 1px;
+    text-align: left;
+}
+
+.cv-entry-text {
+    margin-bottom: 1px;
+    margin-top: 0px;
+}
+
+.cv-generic-bullets,
+.cv-experience-bullets,
+.cv-education-bullets {
+    padding-left: 20px;
+    margin-bottom: 1px;
+    margin-top: 1px;
+    text-align: left;
+}
+
+.cv-generic-bullets li,
+.cv-experience-bullets li,
+.cv-education-bullets li {
+    margin-bottom: 1px;
+}
+
+.cv-experience-entry,
+.cv-education-entry,
+.cv-generic-entry {
+    page-break-inside: avoid;
+}
+
+.cv-experience-entry {
+    margin-bottom: 6px;
+}
+
+.cv-experience-entry-main-line {
+    margin-bottom: 1px;
+    text-align: left;
+}
+
+.cv-education-entry {
+    margin-bottom: 6px;
+}
+
+.cv-education-entry-main-line {
+    margin-bottom: 1px;
+    text-align: left;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: 2px solid #4a90d9;
+    outline-offset: 2px;
+    border-radius: 3px;
+}
+
+/* Section headings — all blue with left border */
+.form-section-title,
+.form-settings>h3,
+.form-header>h3 {
+    font-size: 0.85em;
+    font-weight: bold;
+    color: #4a90d9;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 6px 0 6px 10px;
+    border-left: 3px solid #4a90d9;
+    margin-bottom: 12px;
+}
+
+/* Personal Information and CV Settings headings */
+.form-content h3 {
+    font-size: 0.85em;
+    font-weight: bold;
+    color: #4a90d9;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 6px 0 6px 10px;
+    border-left: 3px solid #4a90d9;
+    margin-bottom: 12px;
+}
+
+/* Add buttons — back to blue */
 .btn-add {
-    background: #1a2a1a;
-    border: 1px solid #3a6a3a;
-    color: #6abf6a;
+    background: #1a2a3a !important;
+    border: 1px solid #3a6a9a !important;
+    color: #4a90d9 !important;
+    width: 100%;
     padding: 6px 12px;
     border-radius: 4px;
     cursor: pointer;
     font-size: 0.85em;
-    width: 100%;
     transition: background 0.2s ease;
 }
 
 .btn-add:hover {
-    background: #223322;
+    background: #1f3347 !important;
 }
 
-/* Delete buttons — red */
-.btn-delete {
-    background: #2a1a1a;
-    border: 1px solid #663333;
-    color: #ff6b6b;
-    padding: 6px 12px;
-    border-radius: 4px;
+/* Gap between fields */
+.form-header {
+    border-top: 1px solid #333;
+    padding-top: 16px;
+    margin-top: 8px;
+    padding-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Gap between visa status and links */
+.form-links {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+    margin-bottom: 8px;
+}
+
+/* Gap between add link and next section */
+.form-header .btn-add {
+    margin-top: 4px;
+}
+
+.cv-name {
+    font-size: 3.8em;
+    margin: 0;
+    padding: 0;
+    letter-spacing: 0.02em;
+    line-height: 1;
+}
+
+.btn-delete-section {
+    background: #2a1a1a !important;
+    border: 1px solid #663333 !important;
+    color: #ff6b6b !important;
+    font-size: 0.8em;
     cursor: pointer;
-    font-size: 0.85em;
-    width: 100%;
+    padding: 4px 8px;
+    flex-shrink: 0;
+    border-radius: 4px;
     transition: background 0.2s ease;
+    width: auto !important;
 }
 
-.btn-delete:hover {
-    background: #3a2020;
+.btn-delete-section:hover {
+    background: #3a2020 !important;
 }
+
+/* Reduce spacing in CV preview */
+.cv-generic-entry {
+    margin-bottom: 2px;
+}
+
+.cv-entry-subheading {
+    margin-bottom: 0px;
+    text-align: left;
+}
+
+.cv-entry-text {
+    margin-bottom: 0px;
+    margin-top: 0px;
+}
+
+.cv-generic-bullets,
+.cv-experience-bullets,
+.cv-education-bullets {
+    padding-left: 20px;
+    margin-bottom: 0px;
+    margin-top: 0px;
+    text-align: left;
+}
+
+.cv-experience-entry {
+    margin-bottom: 4px;
+}
+
+.cv-education-entry {
+    margin-bottom: 4px;
+}
+
+.cv-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.cv-header-left {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.cv-header-right {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-align: right;
+    font-size: 0.9em;
+    line-height: 1.2;
+}
+
+.cv-header-right p,
+.cv-header-right .cv-links {
+    margin: 0;
+    padding: 0;
+}
+
+.cv-name {
+    font-size: 3.8em;
+    margin: 0;
+    padding: 0;
+    letter-spacing: 0.02em;
+    line-height: 1;
+}
+
+.cv-subtitle {
+    font-size: 1.2em;
+    margin: 0;
+    padding: 0;
+    margin-top: 5px;
+}
+
