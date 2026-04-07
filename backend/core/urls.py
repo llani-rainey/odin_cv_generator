@@ -16,12 +16,17 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.contrib.auth import views as auth_views
+from django.contrib.auth import logout
+from django.shortcuts import redirect
 from django.urls import path, include
+
+def logout_view(request):
+    logout(request)
+    return redirect('http://localhost:5173')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('accounts/logout/', logout_view, name='logout'),
     path('accounts/', include('allauth.urls')),
     path('api/', include('cv_api.urls')),
 ]
