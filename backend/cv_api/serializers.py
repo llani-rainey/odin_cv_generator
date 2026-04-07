@@ -107,7 +107,7 @@ class CVSerializer(serializers.ModelSerializer):
 #              - create entry → get entry id back
 #              - create bullets (using entry id to set FK)
 
-    def create(self, validated_data):
+    def create(self, validated_data): # validated_data is a dictionary containing the cleaned, validated data from the incoming json request, after DRF has checked it all passes validation. i.e json converted to python for us to manipulate
         # pull nested lists out of validated_data before creating CV
         # must do this first — CV model has no 'links' or 'sections' fields
         # if we don't pop them, CV.objects.create(**validated_data) would crash
@@ -150,7 +150,7 @@ class CVSerializer(serializers.ModelSerializer):
         # return the created CV instance — DRF expects this
         return cv
 
-    def update(self, instance, validated_data):
+    def update(self, instance, validated_data): # instance is the existing CV OBJECT fetched from the DB (use . to access attributes on it), which now needs updating, its a full django model instance with all its current field values, i.e instance. id  (1) , instance.name ('Sherlock Holmes) etc. We can chain as deep as the tree goes using related names, i.e instance.sections.first().entries.first().bullets.all() , that's why we use settattr below because we're setting attributes on an object (not a dictionary, where as validated_data is a dictionary, thats why we use .items(), .pop(0 etc on it))
         # same pop pattern — pull nested data out before touching CV fields
         links_data = validated_data.pop("links", [])
         sections_data = validated_data.pop("sections", [])
@@ -159,7 +159,7 @@ class CVSerializer(serializers.ModelSerializer):
         # setattr(instance, 'name', 'Sherlock') = instance.name = 'Sherlock'
         # loop does this for every remaining field in validated_data at once
         for attr, value in validated_data.items():
-            setattr(instance, attr, value)
+            setattr(instance, attr, value) # built in function, sets an attribute on an object dynamically, equivalent to object.attr = value
         instance.save()  # write the updated CV fields to DB
 
         # delete-and-recreate strategy for nested data
@@ -167,7 +167,7 @@ class CVSerializer(serializers.ModelSerializer):
         # instance.links uses related_name='links' to find all HeaderLink rows for this CV
         instance.links.all().delete()
         for order, link_data in enumerate(links_data):
-            HeaderLink.objects.create(cv=instance, order=order, **link_data)
+            HeaderLink.objects.create(cv=instance, order=order, **link_data) # delete all links and then just rebuild each link from link_data which comes from links_data which comes from validated_data. Cv=instance means this is the FK for this (i.e parent)
 
         # deleting sections cascades automatically to entries and bullets
         # because on_delete=models.CASCADE on each FK
@@ -175,16 +175,16 @@ class CVSerializer(serializers.ModelSerializer):
         instance.sections.all().delete()
         for s_order, section_data in enumerate(sections_data):
             entries_data = section_data.pop("entries", [])
-            section = Section.objects.create(cv=instance, order=s_order, **section_data)
+            section = Section.objects.create(cv=instance, order=s_order, **section_data) #cv the parent of this section, fetched from the DB , 
 
             for e_order, entry_data in enumerate(entries_data):
                 bullets_data = entry_data.pop("bullets", [])
                 entry = Entry.objects.create(
-                    section=section, order=e_order, **entry_data
+                    section=section, order=e_order, **entry_data #section is the object we just created in the level above, the parent of this entry
                 )
 
-                for b_order, bullet_data in enumerate(bullets_data):
-                    Bullet.objects.create(entry=entry, order=b_order, **bullet_data)
+                for b_order, bullet_data in enumerate(bullets_data): # could have used order instead of s_order, b_order, e_order because each has its own scope but did different for readability and debugging 
+                    Bullet.objects.create(entry=entry, order=b_order, **bullet_data) #entry is the object we just created in the level above, the parent of this bullet
 
         # return the updated instance — DRF expects this
         return instance

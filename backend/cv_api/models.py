@@ -37,8 +37,8 @@ class HeaderLink(models.Model):
 
 
 class Section(models.Model):
-    SECTION_TYPES = (
-        ('generic', 'Generic'), //db_value i.e what gets stored in the db column, display value i.e what shows in Django admin UI
+    SECTION_TYPES = ( # tuple of tuples
+        ('generic', 'Generic'), # db_value i.e what gets stored in the db column, display value i.e what shows in Django admin UI
         ('experience', 'Experience'),
         ('education', 'Education'),
     )
@@ -96,3 +96,15 @@ class Bullet(models.Model):
 
     def __str__(self):
         return self.text[:50]
+    
+
+# class-level version where you start from scratch and fetch from the DB:
+#CV.objects.get(id=1).sections.first().entries.first().bullets.all()
+#          ^
+#          fetches the CV from DB first, then traverses down
+
+# isntance version where you already have the CV, going DOWN (parent → children) using related_name — instance is a CV
+# instance.sections.first().entries.first().bullets.all()  # CV → Section → Entry → Bullet
+
+# going UP (child → parent) using FK field name — start from a bullet
+# bullet.entry.section.cv.user  # Bullet → Entry → Section → CV → User
