@@ -70,6 +70,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "core.wsgi.application"
 
 # 4. DATABASE
+DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.config(
