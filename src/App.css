@@ -1,9 +1,4 @@
-Looking at your CSS there are duplicate and conflicting rules — two `.btn-add`,
-two `.btn-delete`,
-two `.cv-name` etc. Here's the cleaned up full CSS:
-
-
-```css * {
+* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
