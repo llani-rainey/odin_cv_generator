@@ -4,6 +4,9 @@
 # When React fetches /api/cv/ — Django routes it to cv_view
 # This function decides what to do based on whether it's a GET or POST
 
+import logging
+logger = logging.getLogger(__name__)
+
 from rest_framework import status  # HTTP status codes — 200 OK, 404 Not Found, 400 Bad Request etc
 from rest_framework.decorators import api_view  # decorator — tells DRF which HTTP methods this view accepts
 from rest_framework.response import Response  # DRF response object — auto converts Python dict to JSON
