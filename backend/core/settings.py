@@ -1,10 +1,12 @@
 from pathlib import Path
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "django-insecure-sy8oamqke#%_p$f--pf%v^-#^u@k1@=1o4jihkg!@@vbr(qlss"
-
-DEBUG = True
+SECRET_KEY = os.environ.get('SECRET_KEY')
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # 1. ALLOWED HOSTS & SECURITY
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
@@ -68,13 +70,13 @@ WSGI_APPLICATION = "core.wsgi.application"
 
 # 4. DATABASE
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "cv_db",
-        "USER": "user",
-        "PASSWORD": "",
-        "HOST": "127.0.0.1",
-        "PORT": "5432",
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'cv_db'),
+        'USER': os.environ.get('DB_USER', 'user'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 

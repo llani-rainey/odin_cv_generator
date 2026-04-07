@@ -1,5 +1,5 @@
 import html2pdf from 'html2pdf.js'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Header from './components/Header'
 import Section from './components/Section'
 import './App.css'
@@ -9,13 +9,10 @@ import GenericEntryForm from './components/GenericEntryForm'
 import ExperienceEntryForm from './components/ExperienceEntryForm'
 import EducationEntryForm from './components/EducationEntryForm'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
-export default function App() {
-    const [importJson, setImportJson] = useState('')
-    const [showImport, setShowImport] = useState(false)
-    const [formOpen, setFormOpen] = useState(true)
-
-    const [personalInfo, setPersonalInfo] = useState({
+const SHERLOCK_DATA = {
+    personalInfo: {
         name: 'Sherlock Holmes',
         title: 'Consulting Detective',
         location: 'London',
@@ -24,27 +21,11 @@ export default function App() {
         address: '221B Baker Street, London NW1 6XE',
         visaStatus: 'British Citizen [Full UK Working Rights]',
         links: [
-            {
-                id: crypto.randomUUID(),
-                label: 'GitHub',
-                url: 'https://github.com/sherlockholmes',
-            },
-            {
-                id: crypto.randomUUID(),
-                label: "LinkedIn",
-                url: 'https://linkedin.com',
-            },
+            { id: crypto.randomUUID(), label: 'GitHub', url: 'https://github.com/sherlockholmes' },
+            { id: crypto.randomUUID(), label: 'LinkedIn', url: 'https://linkedin.com' },
         ],
-    })
-
-    const [cvSettings, setCvSettings] = useState({
-        font: 'Arial',
-        fontSize: '11px',
-        margins: 'narrow', // 'narrow' | 'moderate' | 'normal'
-        accentColor: '#000000',
-    })
-
-    const [sections, setSections] = useState([
+    },
+    sections: [
         {
             id: 1,
             type: 'generic',
@@ -217,8 +198,141 @@ export default function App() {
                 },
             ],
         },
-    ])
+    ],
+}
 
+export default function App() {
+    const [importJson, setImportJson] = useState('')
+    const [showImport, setShowImport] = useState(false)
+    const [formOpen, setFormOpen] = useState(true)
+    const [user, setUser] = useState(null)
+    const [hasSavedCV, setHasSavedCV] = useState(false)
+    const [authLoading, setAuthLoading] = useState(true)
+    const [saveStatus, setSaveStatus] = useState('')
+
+    const [personalInfo, setPersonalInfo] = useState(SHERLOCK_DATA.personalInfo)
+    const [cvSettings, setCvSettings] = useState({
+        font: 'Arial',
+        fontSize: '11px',
+        margins: 'narrow',
+        accentColor: '#000000',
+    })
+    const [sections, setSections] = useState(SHERLOCK_DATA.sections)
+
+    useEffect(() => {
+        fetch(`${API_URL}/api/cv/`, {
+            credentials: 'include',
+        })
+            .then((res) => {
+                if (res.status === 401) {
+                    setUser(null)
+                    setAuthLoading(false)
+                    return null
+                }
+                if (res.status === 404) {
+                    setUser('loggedIn')
+                    setHasSavedCV(false)
+                    setAuthLoading(false)
+                    return null
+                }
+                return res.json()
+            })
+            .then((data) => {
+                if (data) {
+                    setUser('loggedIn')
+                    setHasSavedCV(true)
+                    setPersonalInfo({
+                        name: data.name || '',
+                        title: data.title || '',
+                        location: data.location || '',
+                        phone: data.phone || '',
+                        email: data.email || '',
+                        address: data.address || '',
+                        visaStatus: data.visaStatus || '',
+                        links: (data.links || []).map((link) => ({
+                            ...link,
+                            id: link.id?.toString() || crypto.randomUUID(),
+                        })),
+                    })
+                    setCvSettings({
+                        font: data.font || 'Arial',
+                        fontSize: data.fontSize || '11px',
+                        margins: data.margins || 'narrow',
+                        accentColor: data.accentColor || '#000000',
+                    })
+                    setSections(data.sections || [])
+                    setAuthLoading(false)
+                }
+            })
+            .catch(() => {
+                setAuthLoading(false)
+            })
+    }, [])
+
+    async function handleSave() {
+        setSaveStatus('saving')
+
+        // transform sections to match serializer format
+        const transformedSections = sections.map((section, sIndex) => ({
+            ...section,
+            order: sIndex,
+            entries: section.entries.map((entry, eIndex) => ({
+                ...entry,
+                order: eIndex,
+                bullets: entry.bullets.map((bullet, bIndex) => ({
+                    text: typeof bullet === 'string' ? bullet : bullet.text,
+                    order: bIndex,
+                })),
+            })),
+        }))
+
+        try {
+            const response = await fetch(`${API_URL}/api/cv/`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: personalInfo.name,
+                    title: personalInfo.title,
+                    location: personalInfo.location,
+                    phone: personalInfo.phone,
+                    email: personalInfo.email,
+                    address: personalInfo.address,
+                    visaStatus: personalInfo.visaStatus,
+                    links: personalInfo.links.map((link, i) => ({
+                        ...link,
+                        order: i,
+                    })),
+                    font: cvSettings.font,
+                    fontSize: cvSettings.fontSize,
+                    margins: cvSettings.margins,
+                    accentColor: cvSettings.accentColor,
+                    sections: transformedSections,
+                }),
+            })
+            if (response.ok) {
+                setHasSavedCV(true)
+                setSaveStatus('saved')
+                setTimeout(() => setSaveStatus(''), 2000)
+            } else {
+                const errors = await response.json()
+                console.error('Save errors:', errors)
+                setSaveStatus('error')
+            }
+        } catch (e) {
+            console.error('Save failed:', e)
+            setSaveStatus('error')
+        }
+    }
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`
+        const parts = value.split(`; ${name}=`)
+        if (parts.length === 2) return parts.pop().split(';').shift()
+        return ''
+    }
 
     function handleCvSettingsChange(field, value) {
         setCvSettings({ ...cvSettings, [field]: value })
@@ -227,7 +341,6 @@ export default function App() {
     function handleExportPDF() {
         const element = document.querySelector('.cv-page')
         element.style.minHeight = 'unset'
-
         const options = {
             margin: 0,
             filename: 'cv.pdf',
@@ -236,14 +349,9 @@ export default function App() {
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
             pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
         }
-
-        html2pdf()
-            .set(options)
-            .from(element)
-            .save()
-            .then(() => {
-                element.style.minHeight = '1123px'
-            })
+        html2pdf().set(options).from(element).save().then(() => {
+            element.style.minHeight = '1123px'
+        })
     }
 
     const importPrompt = `You are helping populate a CV builder app. I will provide you with my existing CV content. Your job is to extract and map my information to the exact JSON structure below.
@@ -284,30 +392,18 @@ export default function App() {
 
     2. EXPERIENCE sections (type: "experience") — used for Work Experience:
     - Each entry has: id, jobTitle, company, companyURL, location, startDate, endDate, bullets
-    - companyURL: if the company name is a hyperlink in the CV, extract the underlying URL. Otherwise use ""
+    - companyURL: company website if you can reasonably infer it, otherwise ""
     - startDate/endDate: format as written e.g. "Jan 2020" or "2020" or "Present"
     - bullets: array of strings, one per bullet point. ALWAYS use bullets for experience entries — never put experience descriptions in a text field.
 
     3. EDUCATION sections (type: "education") — used for Education:
     - Each entry has: id, degree, institution, institutionURL, link, startDate, endDate, text, bullets
-    - link: if the institution name is a hyperlink, extract the underlying URL. Otherwise infer the institution website if well known (e.g. "https://www.cam.ac.uk" for University of Cambridge), otherwise ""
+    - link: institution website if you can reasonably infer it, otherwise ""
     - institutionURL: leave as "" (deprecated field)
     - text: short description or note below the degree line if present
     - bullets: use bullets for awards, relevant papers, achievements etc. PREFER bullets over text.
 
-    4. You may add additional generic sections if my CV has sections that don't fit the above (e.g. Certifications, Technical Training, Languages, Interests).
-
-    LINK EXTRACTION — IMPORTANT:
-    - Many CVs have hyperlinked text where the display text (e.g. "GitHub") hides the actual URL underneath
-    - If you can see or infer the underlying URL from context, extract it into the appropriate url/link field
-    - For GitHub: if a username is mentioned anywhere, construct the URL as https://github.com/username
-    - For LinkedIn: if a profile is mentioned, construct as https://linkedin.com/in/username if the username is visible
-    - Never use a display label as the URL value — urls must always start with https://
-
-    FORMATTING PREFERENCES:
-    - Summary: use the text field for the main paragraph. Bullets are optional for summary.
-    - Everything else: STRONGLY prefer bullets over text. Convert prose descriptions into concise bullet points.
-    - Keep bullet points concise and achievement-focused where possible.
+    4. You may add additional generic sections if my CV has sections that don't fit the above (e.g. Certifications, Languages, Interests).
 
     ORDERING:
     - Keep sections in the same order as they appear in my CV.
@@ -405,11 +501,11 @@ export default function App() {
 
 Now please map my CV content to this structure. Here is my CV:`
 
+
+
     function handleCopyPrompt() {
         navigator.clipboard.writeText(importPrompt)
-        alert(
-            'Prompt copied to clipboard! Paste it into Claude or ChatGPT, then upload or paste your CV.',
-        )
+        alert('Prompt copied to clipboard! Paste it into Claude or ChatGPT, then upload or paste your CV.')
     }
 
     function handleImport(jsonString) {
@@ -417,19 +513,13 @@ Now please map my CV content to this structure. Here is my CV:`
             const cleaned = jsonString
                 .replace(/```json/g, '')
                 .replace(/```/g, '')
-                .replace(/[\u2018\u2019]/g, "'") // smart single quotes
-                .replace(/[\u201C\u201D]/g, '"') // smart double quotes
-                .replace(/^\s+|\s+$/g, '') // trim whitespace
+                .replace(/[\u2018\u2019]/g, "'")
+                .replace(/[\u201C\u201D]/g, '"')
+                .replace(/^\s+|\s+$/g, '')
                 .trim()
-
             console.log('Attempting to parse:', cleaned.substring(0, 100))
             const data = JSON.parse(cleaned)
-
-            if (
-                window.confirm(
-                    'This will replace all your current CV data. Continue?',
-                )
-            ) {
+            if (window.confirm('This will replace all your current CV data. Continue?')) {
                 setPersonalInfo(data.personalInfo)
                 setSections(data.sections)
             }
@@ -438,23 +528,32 @@ Now please map my CV content to this structure. Here is my CV:`
             alert(`Invalid JSON — Error: ${e.message}`)
         }
     }
-    
+
     function handleDeleteSection(sectionId) {
         if (window.confirm('Delete this entire section?')) {
             setSections(sections.filter((s) => s.id !== sectionId))
         }
     }
 
-    function handleAddSection() {
+    function handleAddSection(type = 'generic') {
         setSections([
             ...sections,
             {
                 id: crypto.randomUUID(),
-                type: 'generic',
-                title: 'New Section',
+                type: type,
+                title:
+                    type === 'experience'
+                        ? 'Work Experience'
+                        : type === 'education'
+                          ? 'Education'
+                          : 'New Section',
                 entries: [],
             },
         ])
+    }
+
+    if (authLoading) {
+        return <div className="app-loading">Loading...</div>
     }
 
     return (
@@ -466,6 +565,51 @@ Now please map my CV content to this structure. Here is my CV:`
                     {formOpen && (
                         <span className="form-panel-logo">CV Builder</span>
                     )}
+                    {formOpen && (
+                        <div className="form-panel-auth">
+                            {user ? (
+                                <>
+                                    <button
+                                        className="btn-save"
+                                        onClick={handleSave}
+                                        disabled={saveStatus === 'saving'}
+                                    >
+                                        {saveStatus === 'saving'
+                                            ? 'Saving...'
+                                            : saveStatus === 'saved'
+                                              ? '✓ Saved'
+                                              : saveStatus === 'error'
+                                                ? 'Error'
+                                                : 'Save CV'}
+                                    </button>
+
+                                    <a
+                                        href={`${API_URL}/accounts/logout/`}
+                                        className="btn-logout"
+                                    >
+                                        Logout
+                                    </a>
+                                </>
+                            ) : (
+                                <a
+                                    href={`${API_URL}/accounts/google/login/`}
+                                    className="btn-login"
+                                >
+                                    <img
+                                        src="https://developers.google.com/identity/images/g-logo.png"
+                                        alt="Google"
+                                        style={{
+                                            width: '16px',
+                                            height: '16px',
+                                            marginRight: '8px',
+                                            verticalAlign: 'middle',
+                                        }}
+                                    />
+                                    Sign in with Google
+                                </a>
+                            )}
+                        </div>
+                    )}
                     <button
                         className="collapse-btn"
                         onClick={() => setFormOpen(!formOpen)}
@@ -473,6 +617,14 @@ Now please map my CV content to this structure. Here is my CV:`
                         {formOpen ? '←' : '→'}
                     </button>
                 </div>
+
+                {formOpen && user && !hasSavedCV && (
+                    <div className="demo-banner">
+                        👋 This is example data. Edit it directly or use AI
+                        Import to populate with your own CV. Hit Save CV to save
+                        your changes.
+                    </div>
+                )}
 
                 {formOpen && (
                     <div className="form-import-panel">
@@ -567,12 +719,30 @@ Now please map my CV content to this structure. Here is my CV:`
                                 />
                             )
                         })}
-                        <button className="btn-add" onClick={handleAddSection}>
-                            + Add Section
-                        </button>
+                        <div className="form-add-section-buttons">
+                            <button
+                                className="btn-add"
+                                onClick={() => handleAddSection('generic')}
+                            >
+                                + Custom Section
+                            </button>
+                            <button
+                                className="btn-add"
+                                onClick={() => handleAddSection('experience')}
+                            >
+                                + Experience Section
+                            </button>
+                            <button
+                                className="btn-add"
+                                onClick={() => handleAddSection('education')}
+                            >
+                                + Education Section
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
+
             <div className="preview-panel">
                 <div
                     className="cv-page"
@@ -583,8 +753,8 @@ Now please map my CV content to this structure. Here is my CV:`
                             cvSettings.margins === 'narrow'
                                 ? '40px 50px'
                                 : cvSettings.margins === 'moderate'
-                                ? '56px 72px'
-                                : '72px 96px',
+                                  ? '56px 72px'
+                                  : '72px 96px',
                         '--accent-color': cvSettings.accentColor,
                     }}
                 >
