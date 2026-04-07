@@ -14,9 +14,12 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
 
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8000',
-    'http://localhost:5173', 
+    'http://localhost:5173',
     'http://127.0.0.1:8000',
+    'https://cv-builder-backend-sizn.onrender.com',
+    'https://odin-cv-generator-iota.vercel.app',
 ]
+
 
 # 2. APP DEFINITION
 INSTALLED_APPS = [
@@ -124,7 +127,7 @@ SOCIALACCOUNT_PROVIDERS = {
 
 # Redirects
 LOGIN_REDIRECT_URL = "https://odin-cv-generator-iota.vercel.app/"
-LOGOUT_REDIRECT_URL = "http://localhost:5173"
+LOGOUT_REDIRECT_URL = "https://odin-cv-generator-iota.vercel.app"
 
 # 6. COOKIE & SESSION SETTINGS
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
@@ -139,7 +142,10 @@ SESSION_COOKIE_DOMAIN = None
 CSRF_COOKIE_DOMAIN = None
 
 # 7. CORS
-CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "https://odin-cv-generator-iota.vercel.app",
+]
 CORS_ALLOW_CREDENTIALS = True
 CORS_URLS_REGEX = r'^.*$'
 
