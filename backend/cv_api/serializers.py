@@ -5,7 +5,7 @@ from .models import CV, HeaderLink, Section, Entry, Bullet
 class BulletSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bullet # model is always defined in Meta, tell me WHICH model to read from
-        fields = ["id", "text", "order"] # fields is always defined in Meta,tell me WHICH fields to include
+        fields = ["id", "text", "order"] # fields is always defined in Meta, tell me WHICH fields to include
 
 
 class EntrySerializer(serializers.ModelSerializer):
@@ -17,7 +17,7 @@ class EntrySerializer(serializers.ModelSerializer):
     jobTitle = serializers.CharField(source="job_title", allow_blank=True, required=False)
     companyURL = serializers.URLField(
         source="company_url", allow_blank=True, required=False
-        # URLField (type from models.py like CharField but with built in enforcment) needs required=False — strict by default, rejects missing fields
+        # URLField needs required=False — strict by default, rejects missing fields
     )
     linkLabel = serializers.CharField(source="link_label", allow_blank=True, required=False)
     startDate = serializers.CharField(source="start_date", allow_blank=True, required=False)
@@ -93,21 +93,24 @@ class CVSerializer(serializers.ModelSerializer):
             "links",
             "sections",
         ]
-        
-        
-# 1. Pop links and sections out → set aside for later
-#2. Create CV (now validated_data only has flat CV fields) → get CV id back
-#3. Deal with the two things you popped:
-#   - create links (using CV id to set FK)
-#   - create sections (using CV id to set FK)
-#        - but first pop entries out of each section
-#- create section → get section id back
-#        - create entries (using section id to set FK)
-#              - but first pop bullets out of each entry
-#              - create entry → get entry id back
-#              - create bullets (using entry id to set FK)
 
-    def create(self, validated_data): # validated_data is a dictionary containing the cleaned, validated data from the incoming json request, after DRF has checked it all passes validation. i.e json converted to python for us to manipulate
+    # 1. Pop links and sections out → set aside for later
+    # 2. Create CV (now validated_data only has flat CV fields) → get CV id back
+    # 3. Deal with the two things you popped:
+    #    - create links (using CV id to set FK)
+    #    - create sections (using CV id to set FK)
+    #         - but first pop entries out of each section
+    #         - create section → get section id back
+    #         - create entries (using section id to set FK)
+    #               - but first pop bullets out of each entry
+    #               - create entry → get entry id back
+    #               - create bullets (using entry id to set FK)
+
+    def create(self, validated_data):
+        # validated_data is a dictionary containing the cleaned, validated data from
+        # the incoming JSON request, after DRF has checked it all passes validation.
+        # i.e JSON converted to Python for us to manipulate
+
         # pull nested lists out of validated_data before creating CV
         # must do this first — CV model has no 'links' or 'sections' fields
         # if we don't pop them, CV.objects.create(**validated_data) would crash
@@ -115,42 +118,66 @@ class CVSerializer(serializers.ModelSerializer):
         sections_data = validated_data.pop("sections", [])
 
         # create the CV row first — we need its id before creating children
-        cv = CV.objects.create(**validated_data) # star star is python dictionary unpacking operator of the parameter passed in at the top. spreads out as keyword arugments, without it id have to do name=validated_data['name], title=validated_data['title] etc
-        
-        #cv is now a python objecting representing that DB row, i.e a cv row, which has cv.id, cv.name, cv.title etc
+        # ** is python dictionary unpacking operator — spreads dict as keyword arguments
+        # without it id have to do name=validated_data['name'], title=validated_data['title'] etc
+        cv = CV.objects.create(**validated_data)
+
+        # cv is now a Python object representing that DB row
+        # i.e a cv row, which has cv.id, cv.name, cv.title etc
 
         # create links — enumerate gives us index (order) + value (link_data) together
         # order becomes the DB ordering field so links come back in the right sequence
-        for order, link_data in enumerate(links_data): # arugment is from the top where we defined it
+        for order, link_data in enumerate(links_data):
+            # pop order out of link_data — we set it explicitly via enumerate
+            # without this we'd pass order= twice and Django would crash
+            link_data.pop("order", None)
             HeaderLink.objects.create(cv=cv, order=order, **link_data)
 
         # create sections — same pattern but nested deeper
-        for s_order, section_data in enumerate(sections_data): # arugment is from the top where we defined it
+        for s_order, section_data in enumerate(sections_data):
             # pop entries out before creating section — same reason as above
             # Section model has no 'entries' field, it's a related model
             entries_data = section_data.pop("entries", [])
+            # pop order — we set it explicitly via enumerate
+            section_data.pop("order", None)
 
             # create section row — cv=cv sets the FK back to the parent CV
+            # cv is the parent of this section
             section = Section.objects.create(cv=cv, order=s_order, **section_data)
 
             # create entries for this section
             for e_order, entry_data in enumerate(entries_data):
                 # pop bullets out before creating entry — same pattern again
                 bullets_data = entry_data.pop("bullets", [])
+                # pop order — we set it explicitly via enumerate
+                entry_data.pop("order", None)
 
                 # create entry row — section=section sets FK back to parent section
+                # section is the object we just created in the level above, parent of this entry
                 entry = Entry.objects.create(
                     section=section, order=e_order, **entry_data
                 )
 
                 # create bullets for this entry — bottom of the tree, no children to pop
+                # could have used order instead of s_order, b_order, e_order because each
+                # has its own scope but used different names for readability and debugging
                 for b_order, bullet_data in enumerate(bullets_data):
+                    # pop order — we set it explicitly via enumerate
+                    bullet_data.pop("order", None)
+                    # entry is the object we just created in the level above, parent of this bullet
                     Bullet.objects.create(entry=entry, order=b_order, **bullet_data)
 
         # return the created CV instance — DRF expects this
         return cv
 
-    def update(self, instance, validated_data): # instance is the existing CV OBJECT fetched from the DB (use . to access attributes on it), which now needs updating, its a full django model instance with all its current field values, i.e instance. id  (1) , instance.name ('Sherlock Holmes) etc. We can chain as deep as the tree goes using related names, i.e instance.sections.first().entries.first().bullets.all() , that's why we use settattr below because we're setting attributes on an object (not a dictionary, where as validated_data is a dictionary, thats why we use .items(), .pop(0 etc on it))
+    def update(self, instance, validated_data):
+        # instance is the existing CV OBJECT fetched from the DB (use . to access attributes)
+        # it's a full Django model instance with all its current field values
+        # i.e instance.id (1), instance.name ('Sherlock Holmes') etc
+        # we can chain as deep as the tree: instance.sections.first().entries.first().bullets.all()
+        # that's why we use setattr below — setting attributes on an object not a dictionary
+        # validated_data IS a dictionary — that's why we use .items(), .pop() etc on it
+
         # same pop pattern — pull nested data out before touching CV fields
         links_data = validated_data.pop("links", [])
         sections_data = validated_data.pop("sections", [])
@@ -159,7 +186,9 @@ class CVSerializer(serializers.ModelSerializer):
         # setattr(instance, 'name', 'Sherlock') = instance.name = 'Sherlock'
         # loop does this for every remaining field in validated_data at once
         for attr, value in validated_data.items():
-            setattr(instance, attr, value) # built in function, sets an attribute on an object dynamically, equivalent to object.attr = value
+            # built in Python function, sets an attribute on an object dynamically
+            # equivalent to object.attribute_name = value
+            setattr(instance, attr, value)
         instance.save()  # write the updated CV fields to DB
 
         # delete-and-recreate strategy for nested data
@@ -167,7 +196,10 @@ class CVSerializer(serializers.ModelSerializer):
         # instance.links uses related_name='links' to find all HeaderLink rows for this CV
         instance.links.all().delete()
         for order, link_data in enumerate(links_data):
-            HeaderLink.objects.create(cv=instance, order=order, **link_data) # delete all links and then just rebuild each link from link_data which comes from links_data which comes from validated_data. Cv=instance means this is the FK for this (i.e parent)
+            # pop order — we set it explicitly via enumerate, passing twice would crash
+            link_data.pop("order", None)
+            # cv=instance means this is the FK for this — instance is the parent CV
+            HeaderLink.objects.create(cv=instance, order=order, **link_data)
 
         # deleting sections cascades automatically to entries and bullets
         # because on_delete=models.CASCADE on each FK
@@ -175,16 +207,24 @@ class CVSerializer(serializers.ModelSerializer):
         instance.sections.all().delete()
         for s_order, section_data in enumerate(sections_data):
             entries_data = section_data.pop("entries", [])
-            section = Section.objects.create(cv=instance, order=s_order, **section_data) #cv the parent of this section, fetched from the DB , 
+            section_data.pop("order", None)
+            # cv=instance — instance is the existing CV fetched from DB, parent of this section
+            section = Section.objects.create(cv=instance, order=s_order, **section_data)
 
             for e_order, entry_data in enumerate(entries_data):
                 bullets_data = entry_data.pop("bullets", [])
+                entry_data.pop("order", None)
+                # section is the object we just created in the level above, parent of this entry
                 entry = Entry.objects.create(
-                    section=section, order=e_order, **entry_data #section is the object we just created in the level above, the parent of this entry
+                    section=section, order=e_order, **entry_data
                 )
 
-                for b_order, bullet_data in enumerate(bullets_data): # could have used order instead of s_order, b_order, e_order because each has its own scope but did different for readability and debugging 
-                    Bullet.objects.create(entry=entry, order=b_order, **bullet_data) #entry is the object we just created in the level above, the parent of this bullet
+                # could have used order instead of s_order, b_order, e_order because each
+                # has its own scope but used different names for readability and debugging
+                for b_order, bullet_data in enumerate(bullets_data):
+                    bullet_data.pop("order", None)
+                    # entry is the object we just created in the level above, parent of this bullet
+                    Bullet.objects.create(entry=entry, order=b_order, **bullet_data)
 
         # return the updated instance — DRF expects this
         return instance

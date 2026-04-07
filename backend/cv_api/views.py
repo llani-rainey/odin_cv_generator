@@ -4,16 +4,20 @@
 # When React fetches /api/cv/ — Django routes it to cv_view
 # This function decides what to do based on whether it's a GET or POST
 
-import logging
-logger = logging.getLogger(__name__)
 
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status  # HTTP status codes — 200 OK, 404 Not Found, 400 Bad Request etc
-from rest_framework.decorators import api_view  # decorator — tells DRF which HTTP methods this view accepts
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.decorators import api_view, authentication_classes, permission_classes # decorator — tells DRF which HTTP methods this view accepts
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response  # DRF response object — auto converts Python dict to JSON
 
 from .models import CV
 from .serializers import CVSerializer
 
+class CsrfExemptSessionAuthentication(SessionAuthentication):
+    def enforce_csrf(self, request):
+        return  # skip CSRF check
 
 @api_view(['GET', 'POST']) #request.data stops working without this decorator, would have to manully parse the JSON body, like:
 #import json 
@@ -23,6 +27,8 @@ from .serializers import CVSerializer
 # but GET and POST still require login to interact with the DB
 #plain function → you handle everything yourself
 #@api_view      → DRF handles the boring stuff, I write the logic
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([AllowAny])
 def cv_view(request): #this is tied to cv_api/urls.py in urlpatterns = [path('cv/', views.cv_view, name='cv')]
     #1. Someone visits /api/cv/
 #2. Django matches it to cv_view via urlpatterns
