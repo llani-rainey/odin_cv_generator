@@ -1,6 +1,7 @@
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+import dj_database_url
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -69,16 +70,25 @@ TEMPLATES = [
 WSGI_APPLICATION = "core.wsgi.application"
 
 # 4. DATABASE
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'cv_db'),
-        'USER': os.environ.get('DB_USER', 'user'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True,
+        )
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('DB_NAME', 'cv_db'),
+            'USER': os.environ.get('DB_USER', 'user'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+            'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
+            'PORT': os.environ.get('DB_PORT', '5432'),
+        }
+    }
 
 # 5. AUTHENTICATION & ALLAUTH
 AUTHENTICATION_BACKENDS = [
@@ -112,7 +122,7 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 # Redirects
-LOGIN_REDIRECT_URL = "http://localhost:5173"
+LOGIN_REDIRECT_URL = "https://odin-cv-generator-iota.vercel.app/"
 LOGOUT_REDIRECT_URL = "http://localhost:5173"
 
 # 6. COOKIE & SESSION SETTINGS
