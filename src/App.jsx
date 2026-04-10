@@ -220,8 +220,9 @@ export default function App() {
     const [sections, setSections] = useState(SHERLOCK_DATA.sections)
 
     useEffect(() => {
-        fetch(`${API_URL}/api/cv/`, {
-            credentials: 'include',
+        fetch(`${API_URL}/api/cv/`, { //driven by core/urls.py path we defined 
+            // fetch(url, options) same as, const options = { credentials: 'include' }, credentials is a built-in fetch option, such as method: 'GET', headers: {}, mode: 'cors', cache: 'no-cache', redirect: 'follow' etc
+            credentials: 'include', 
         })
             .then((res) => {
                 if (res.status === 401) {

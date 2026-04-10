@@ -5,7 +5,7 @@
 # This function decides what to do based on whether it's a GET or POST
 
 
-from django.views.decorators.csrf import csrf_exempt
+
 from rest_framework import status  # HTTP status codes — 200 OK, 404 Not Found, 400 Bad Request etc
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes # decorator — tells DRF which HTTP methods this view accepts
@@ -15,7 +15,7 @@ from rest_framework.response import Response  # DRF response object — auto con
 from .models import CV
 from .serializers import CVSerializer
 
-class CsrfExemptSessionAuthentication(SessionAuthentication):
+class CsrfExemptSessionAuthentication(SessionAuthentication): #DRF ships with SessionAuthentication, a class that handles session cookie auth AND enforces CSRF, however we wanted session cookie auth but withotu CSRF enforcement. DRF doesn't provide that combination out of the box, so we inherited everything and then overrode the enforce_csrf that comes with it
     def enforce_csrf(self, request):
         return  # skip CSRF check
 
@@ -28,8 +28,11 @@ class CsrfExemptSessionAuthentication(SessionAuthentication):
 #plain function → you handle everything yourself
 #@api_view      → DRF handles the boring stuff, I write the logic
 @authentication_classes([CsrfExemptSessionAuthentication])
-@permission_classes([AllowAny])
-def cv_view(request): #this is tied to cv_api/urls.py in urlpatterns = [path('cv/', views.cv_view, name='cv')]
+@permission_classes([AllowAny]) #AllowAny - dont need to know who the user is to return the data, no login required. vs. IsAuthenticated (i.e GET /api/cv/ returns this user's CV, they must be logged in, otherwise 401.) vs. IsAdminUser, we whitelist all to access, but then restrict within the function below with custom messages etc
+def cv_view(request): #this is tied to cv_api/urls.py in urlpatterns = [path('cv/', views.cv_view, name='cv')], could have called this banana but then also need to ensure cv_api/urls.py uses tha too: #django knows it needs to insert a request object it created here because its the function name used in cv_api.urls and it is a view fucntion meaning it is called with a request object when that url is hit, just convention to call the paramter request but could have called it anything but thats the object passed in
+    # urlpatterns = [
+#     path('cv/', views.cv_view/BANANA, name='cv'),  # must match the function name
+# ]
     #1. Someone visits /api/cv/
 #2. Django matches it to cv_view via urlpatterns
 #3. Django builds a request object from the HTTP request
@@ -44,8 +47,8 @@ def cv_view(request): #this is tied to cv_api/urls.py in urlpatterns = [path('cv
     if request.method == 'GET':
         # block unauthenticated users — can't load a CV without being logged in
         if not request.user.is_authenticated:
-            return Response(
-                {'detail': 'Login to load your CV'},
+            return Response( #impported from DRF at top, a DRF class, takes a python dict and converts to JSON to send to react
+                {'detail': 'Login to load your CV'}, #detail is convention in DRF as the key for  error messages
                 status=status.HTTP_401_UNAUTHORIZED #status is a keyword argument
             )
         try:
@@ -92,3 +95,50 @@ def cv_view(request): #this is tied to cv_api/urls.py in urlpatterns = [path('cv
             # e.g. {'email': ['Enter a valid email address']}
             # React can use these to show field-level error messages
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+    
+# If wanted to introduce a delete functionality, would also have to add DELETE to the decorator    
+# # if request.method == 'DELETE':
+# #     if not request.user.is_authenticated:
+# #         return Response(status=401)
+# #     try:
+# #         cv = CV.objects.get(user=request.user)
+# #         cv.delete()  # Django ORM — deletes the CV and cascades to all children
+# #         return Response({'detail': 'CV deleted'}, status=200)
+# #     except CV.DoesNotExist:
+# #         return Response({'detail': 'No CV to delete'}, status=404)
+
+
+# GET    — fetch a CV, fetch a list of products, fetch a user profile
+# POST   — create a new CV, submit a form, log in [we use post for create and update, technically should have used put/patch but used post for simpllicty 
+# PUT    — replace entire CV with new version
+# PATCH  — update just the email field on a CV
+# DELETE — delete a CV, delete an account
+
+# @api_view(['GET', 'POST'])
+# # Q: which HTTP methods are allowed?
+# # A: GET and POST only
+
+# @authentication_classes([CsrfExemptSessionAuthentication])
+# # Q: how do we know WHO is making the request?
+# # A: read their session cookie, look them up in DB, set request.user vs these other  options:
+
+        # @authentication_classes([SessionAuthentication])
+        # # reads session cookie — standard for browser-based apps
+
+        # @authentication_classes([TokenAuthentication])
+        # # reads Authorization header: "Token abc123"
+        # # common for mobile apps or third party API access
+
+        # @authentication_classes([BasicAuthentication])
+        # # reads username/password from Authorization header
+        # # only for testing, never production
+
+        # @authentication_classes([SessionAuthentication, TokenAuthentication])
+        # # tries both — whichever works first wins
+        # # useful if you have both browser users and API clients
+
+
+# @permission_classes([AllowAny])
+# # Q: is this user ALLOWED to access this view at all?
+# # A: yes, everyone — we'll restrict inside the function

@@ -191,3 +191,15 @@ LOGGING = {
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',   # unauthenticated users
+        'rest_framework.throttling.UserRateThrottle',   # authenticated users
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/day',    # anonymous users: 100 requests per day
+        'user': '1000/day',   # logged in users: 1000 requests per day
+    }
+}
