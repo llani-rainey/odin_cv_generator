@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import CV, HeaderLink, Section, Entry, Bullet
 
 
-class BulletSerializer(serializers.ModelSerializer):
+class BulletSerializer(serializers.ModelSerializer): #start at smallest class first and build upward
     class Meta:
         model = Bullet # model is always defined in Meta, tell me WHICH model to read from
         fields = ["id", "text", "order"] # fields is always defined in Meta, tell me WHICH fields to include
