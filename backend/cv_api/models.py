@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
-class CV(models.Model):
+class CV(models.Model): #start at biggest/parent (User is built in to django and imported here)
     user = models.OneToOneField(User, on_delete=models.CASCADE)
 
     # Personal Info
@@ -59,24 +59,24 @@ class Entry(models.Model):
     order = models.PositiveIntegerField(default=0)
 
     # Experience fields
-    job_title = models.CharField(max_length=255, blank=True)
+    job_title = models.CharField(max_length=255, blank=True) #jobTitle
     company = models.CharField(max_length=255, blank=True)
-    company_url = models.URLField(blank=True)
+    company_url = models.URLField(blank=True) #companyURL
 
     # Education fields
     degree = models.CharField(max_length=255, blank=True)
     institution = models.CharField(max_length=255, blank=True)
-    institution_url = models.URLField(blank=True)
+    institution_url = models.URLField(blank=True) #institutionURL
 
     # Generic fields
     subheading = models.CharField(max_length=255, blank=True)
-    link_label = models.CharField(max_length=100, blank=True)
-    link_url = models.URLField(blank=True)
+    link_label = models.CharField(max_length=100, blank=True) #linkLabel
+    link_url = models.URLField(blank=True) #linkURL
 
     # Shared fields
     location = models.CharField(max_length=255, blank=True)
-    start_date = models.CharField(max_length=100, blank=True)
-    end_date = models.CharField(max_length=100, blank=True)
+    start_date = models.CharField(max_length=100, blank=True) #startDate
+    end_date = models.CharField(max_length=100, blank=True) #endDate
     text = models.TextField(blank=True)
 
     class Meta:
