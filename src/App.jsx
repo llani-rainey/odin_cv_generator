@@ -201,6 +201,43 @@ const SHERLOCK_DATA = {
     ],
 }
 
+// normaliseSectionsFromDjango — transforms Django's response format into React state format
+// Django returns bullets as objects: { text: 'bullet 1', order: 0 }
+// React state expects bullets as plain strings: 'bullet 1'
+// also handles case where bullets are already strings (typeof check) — defensive guard
+function normaliseSectionsFromDjango(sections) {
+    return (sections || []).map((section) => ({
+        ...section,
+        entries: (section.entries || []).map((entry) => ({
+            ...entry,
+            bullets: (entry.bullets || []).map((bullet) =>
+                typeof bullet === 'string' ? bullet : bullet.text,
+            ),
+        })),
+    }))
+}
+
+// normaliseSectionsForDjango — transforms React state format into Django serializer format
+// React state stores bullets as plain strings: ['bullet 1', 'bullet 2']
+// Django's BulletSerializer expects objects with text and order: { text: 'bullet 1', order: 0 }
+// React state has no order integers — order is implicit from array position
+// Django needs explicit order integers to store in the DB and return in correct sequence
+// enumerate equivalent — sIndex/eIndex/bIndex from .map() second argument replaces Python's enumerate()
+function normaliseSectionsForDjango(sections) {
+    return sections.map((section, sIndex) => ({
+        ...section,
+        order: sIndex,
+        entries: section.entries.map((entry, eIndex) => ({
+            ...entry,
+            order: eIndex,
+            bullets: entry.bullets.map((bullet, bIndex) => ({
+                text: typeof bullet === 'string' ? bullet : bullet.text,
+                order: bIndex,
+            })),
+        })),
+    }))
+}
+
 export default function App() {
     const [importJson, setImportJson] = useState('')
     const [showImport, setShowImport] = useState(false)
@@ -219,16 +256,26 @@ export default function App() {
     })
     const [sections, setSections] = useState(SHERLOCK_DATA.sections)
 
+    //     useState   → stores values, triggers re-renders when values change
+    //     useEffect  → reaches outside React (fetch, timers, DOM etc)
+    //             → controlled by dependency array so it doesn't run uncontrollably
+
+    // useEffect uses .then() chains — it can't be async itself, and .then() is the alternative syntax for handling promises without async/await.
+
     useEffect(() => {
-        fetch(`${API_URL}/api/cv/`, { //driven by core/urls.py path we defined 
+        // runs once on launch given nothing in the dependency array
+        fetch(`${API_URL}/api/cv/`, {
+            //driven by core/urls.py path we defined , gets a GET request to Django's /api/cv/ endpoint, fetch defaults to GET, have to expiclitly say method: 'POST' if want that, post has a body, GET doesnt
             // fetch(url, options) same as, const options = { credentials: 'include' }, credentials is a built-in fetch option, such as method: 'GET', headers: {}, mode: 'cors', cache: 'no-cache', redirect: 'follow' etc
-            credentials: 'include', 
+            credentials: 'include', //built-in fetch option, tells the browser to send the session cookie with the request. Without it Django would never know who the user is — cross-origin requests strip cookies by default.
         })
             .then((res) => {
+                // runs when the http response arrives, res = response (user assigned name, could be anything, its the resposne object Django sent back, has res.status, res.json() etc
                 if (res.status === 401) {
-                    setUser(null)
-                    setAuthLoading(false)
-                    return null
+                    // not logged in
+                    setUser(null) // sets user to null so the UI shows the login button
+                    setAuthLoading(false) // sets authLoading to false so the loading screen goes away and sherlock shows
+                    return null // stops the chain
                 }
                 if (res.status === 404) {
                     setUser('loggedIn')
@@ -236,14 +283,21 @@ export default function App() {
                     setAuthLoading(false)
                     return null
                 }
-                return res.json()
+                if (!res.ok) {
+                    // true if status 200-299 (ok), else unexpected error → stop loading screen, show Sherlock
+                    setAuthLoading(false)
+                    return null
+                }
+                return res.json() // gets passed on to the next 'then' chain, this is async, reading and parsing the body takes time, so it returns a promise (not resolved yet), only runs if status was 200 (logged in and has a saved cv)
             })
             .then((data) => {
+                // this is res.json(), data is what comes out of the promise, now an actual JS object, not a promise, '.then' does the unwrapping
                 if (data) {
+                    // guards against null from 401/404 branches above, is null was returned, this block doesnt run
                     setUser('loggedIn')
                     setHasSavedCV(true)
                     setPersonalInfo({
-                        name: data.name || '',
+                        name: data.name || '', // if undefined or null, use empty string instead of crashing
                         title: data.title || '',
                         location: data.location || '',
                         phone: data.phone || '',
@@ -251,17 +305,12 @@ export default function App() {
                         address: data.address || '',
                         visaStatus: data.visaStatus || '',
                         links: (data.links || []).map((link) => ({
-                            ...link,
-                            id: link.id?.toString() || crypto.randomUUID(),
+                            //if links missing, use empty array so .map doesnt crash. link is an obejct like {id: 5, label: 'Github', url: 'https...'} so we wrap the object in () so JS knows its an object not a code block
+                            ...link, // spread operator copies all the existing properties from link in the new object and then we override/add id below
+                            id: link.id?.toString() || crypto.randomUUID(), // if link.id exists, call .toString() on it, converting the integer to string, if left side is undefined (id was missing), generate a fresh UUID instead. Primary keys are integers by default, when django creates a model, Django automatically adds id = models.AutoField(primary_key=True), and DB stores it as an intger, when DRF serialziers this to JSON, it continues to be in integer format, int format would work as key for JS but would be inconsistent with our other fields, reacts docs say keys should be strings and nonetheless the UUID is a string so this keeps it consistent
                         })),
                     })
-                    setCvSettings({
-                        font: data.font || 'Arial',
-                        fontSize: data.fontSize || '11px',
-                        margins: data.margins || 'narrow',
-                        accentColor: data.accentColor || '#000000',
-                    })
-                    setSections(data.sections || [])
+                    setCvSettings(normaliseSectionsFromDjango(data.sections))
                     setAuthLoading(false)
                 }
             })
@@ -270,31 +319,47 @@ export default function App() {
             })
     }, [])
 
-    async function handleSave() {
-        setSaveStatus('saving')
 
-        // transform sections to match serializer format
-        const transformedSections = sections.map((section, sIndex) => ({
-            ...section,
-            order: sIndex,
-            entries: section.entries.map((entry, eIndex) => ({
-                ...entry,
-                order: eIndex,
-                bullets: entry.bullets.map((bullet, bIndex) => ({
-                    text: typeof bullet === 'string' ? bullet : bullet.text,
-                    order: bIndex,
-                })),
-            })),
-        }))
+//FLow of data:
+// user types in form
+//     ↓
+// onChange handlers call setPersonalInfo / setSections etc
+//     ↓
+// state updates — React re-renders
+//     ↓
+// user clicks Save CV
+//     ↓
+// handleSave reads current state values
+//     ↓
+// sends them to Django via fetch POST
+//     ↓
+// Django saves to DB
+//     ↓
+// handleSave updates UI feedback state only (saveStatus, hasSavedCV)
+
+
+    //handleSave just reads from state and sends it to Django — it doesn't modify state. The only state it updates is:
+    // setHasSavedCV(true) // mark that a saved CV now exists in DB
+    // setSaveStatus('saved') // update button text to '✓ Saved'
+    // setTimeout(() => setSaveStatus(''), 2000) // reset button after 2 seconds
+    async function handleSave() { // handleSave just takes a snapshot of whatever is currently in state and persists it to Django.
+        //marks as async so we can use await inside it, async functions always return a promise but we dont need to worry about that here since we're not using the return value. we use async because we're calling something below that returns a promise so need to mark the function as async
+        setSaveStatus('saving') // updates teh save button text immediately when clicked - before the fetch even starts
+
+        // personalInfo and cvSettings dont need transformation, theyre already in the right shape to send directly.
+        //links only need order adding, simple enough to do inline in the JSON.stringify body which is done below
+
+        const transformedSections = normaliseSectionsForDjango(sections)
 
         try {
             const response = await fetch(`${API_URL}/api/cv/`, {
-                method: 'POST',
-                credentials: 'include',
+                // data is sent to django as a http request in the shape/format the CVSerializer expected
+                method: 'POST', // override default GET, sending data not reading it
+                credentials: 'include', //built-in fetch option, tells the browser to send the session cookie with the request.
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json', // tells Django the body is Json, without this Django might not parse it correctly
                 },
-                body: JSON.stringify({
+                body: JSON.stringify({ //builds the complete JSON payload DJango expects, spreads personalInfo and cvSettings flat, matches with what the CVSerializer expects. sections uses the pre pre-transformed version with orders and bullet objects
                     name: personalInfo.name,
                     title: personalInfo.title,
                     location: personalInfo.location,
@@ -302,7 +367,7 @@ export default function App() {
                     email: personalInfo.email,
                     address: personalInfo.address,
                     visaStatus: personalInfo.visaStatus,
-                    links: personalInfo.links.map((link, i) => ({
+                    links: personalInfo.links.map((link, i) => ({ //dealing with links inline here as fairly simple but could have done a seperate function for this
                         ...link,
                         order: i,
                     })),
@@ -310,7 +375,7 @@ export default function App() {
                     fontSize: cvSettings.fontSize,
                     margins: cvSettings.margins,
                     accentColor: cvSettings.accentColor,
-                    sections: transformedSections,
+                    sections: transformedSections, // contains all the nested data underneath it, sections > entries > bullets, Django's serializer unpacks it level by level
                 }),
             })
             if (response.ok) {
@@ -350,9 +415,13 @@ export default function App() {
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
             pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
         }
-        html2pdf().set(options).from(element).save().then(() => {
-            element.style.minHeight = '1123px'
-        })
+        html2pdf()
+            .set(options)
+            .from(element)
+            .save()
+            .then(() => {
+                element.style.minHeight = '1123px'
+            })
     }
 
     const importPrompt = `You are helping populate a CV builder app. I will provide you with my existing CV content. Your job is to extract and map my information to the exact JSON structure below.
@@ -502,11 +571,11 @@ export default function App() {
 
 Now please map my CV content to this structure. Here is my CV:`
 
-
-
     function handleCopyPrompt() {
         navigator.clipboard.writeText(importPrompt)
-        alert('Prompt copied to clipboard! Paste it into Claude or ChatGPT, then upload or paste your CV.')
+        alert(
+            'Prompt copied to clipboard! Paste it into Claude or ChatGPT, then upload or paste your CV.',
+        )
     }
 
     function handleImport(jsonString) {
@@ -520,7 +589,11 @@ Now please map my CV content to this structure. Here is my CV:`
                 .trim()
             console.log('Attempting to parse:', cleaned.substring(0, 100))
             const data = JSON.parse(cleaned)
-            if (window.confirm('This will replace all your current CV data. Continue?')) {
+            if (
+                window.confirm(
+                    'This will replace all your current CV data. Continue?',
+                )
+            ) {
                 setPersonalInfo(data.personalInfo)
                 setSections(data.sections)
             }
@@ -621,9 +694,9 @@ Now please map my CV content to this structure. Here is my CV:`
 
                 {formOpen && user && !hasSavedCV && (
                     <div className="demo-banner">
-                        👋 This is example data. Edit it directly or use AI
-                        Import to populate with your own CV. Hit Save CV to save
-                        your changes.
+                        This is example data. Edit it directly or use AI Import
+                        to populate with your own CV. Hit Save CV to save your
+                        changes.
                     </div>
                 )}
 
