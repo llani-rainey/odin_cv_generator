@@ -11,6 +11,7 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes # decorator — tells DRF which HTTP methods this view accepts
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response  # DRF response object — auto converts Python dict to JSON
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from .models import CV
 from .serializers import CVSerializer
@@ -27,7 +28,7 @@ class CsrfExemptSessionAuthentication(SessionAuthentication): #DRF ships with Se
 # but GET and POST still require login to interact with the DB
 #plain function → you handle everything yourself
 #@api_view      → DRF handles the boring stuff, I write the logic
-@authentication_classes([CsrfExemptSessionAuthentication])
+@authentication_classes([JWTAuthentication, CsrfExemptSessionAuthentication])
 @permission_classes([AllowAny]) #AllowAny - dont need to know who the user is to return the data, no login required. vs. IsAuthenticated (i.e GET /api/cv/ returns this user's CV, they must be logged in, otherwise 401.) vs. IsAdminUser, we whitelist all to access, but then restrict within the function below with custom messages etc
 def cv_view(request): #this is tied to cv_api/urls.py in urlpatterns = [path('cv/', views.cv_view, name='cv')], could have called this banana but then also need to ensure cv_api/urls.py uses tha too: #django knows it needs to insert a request object it created here because its the function name used in cv_api.urls and it is a view fucntion meaning it is called with a request object when that url is hit, just convention to call the paramter request but could have called it anything but thats the object passed in
     # urlpatterns = [

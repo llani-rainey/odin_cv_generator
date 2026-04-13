@@ -897,7 +897,7 @@ Now please map my CV content to this structure. Here is my CV:`
                                 onClick={handleCopyPrompt}
                                 title="Copies a prompt to your clipboard. Paste it into Claude or ChatGPT or your AI of choice along with your existing CV to generate importable JSON then click Paste JSON to autopopulate the template."
                             >
-                                📋 Copy AI Prompt
+                                Copy AI Prompt
                             </button>
                             <button
                                 className="btn-import-toggle"
