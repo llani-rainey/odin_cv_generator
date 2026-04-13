@@ -182,6 +182,23 @@ def refresh_token_view(request):
         return JsonResponse({'error': 'Invalid refresh token'}, status=401)
         # React handles 401 by showing Sign in with Google button
         # user needs to log in again to get a new refresh token
+        
+def api_logout_view(request):
+    # API logout — called by React's handleLogout function
+    # deletes the httpOnly refresh_token cookie server-side
+    # JavaScript can't delete httpOnly cookies directly — only the server can
+    # separate from logout_view which does a browser redirect (used for allauth flows)
+    # this returns JSON — React handles the redirect itself
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    response = JsonResponse({'detail': 'Logged out'})
+    response.delete_cookie(
+        'refresh_token',
+        samesite='None',    # must match how cookie was originally set in exchange_code
+                            # if samesite doesn't match, browser may not delete the cookie
+    )
+    logout(request)         # clear Django session too — belt and braces
+    return response
 
 
 urlpatterns = [
@@ -226,6 +243,13 @@ urlpatterns = [
     # must come BEFORE path('api/')
     # returns new access token in body — React stores in state
 
+    path('api/auth/logout/', api_logout_view, name='api_logout'),
+    # React POSTs here when user clicks Logout
+    # must come BEFORE path('api/') 
+    # deletes httpOnly refresh_token cookie server-side
+    # returns JSON — React then clears accessToken and resets UI
+    
+    
     path('api/', include('cv_api.urls')),
     # include means don't handle this here, delegate it to another urls.py file
     # any request starting with /api/ → handed off to cv_api/urls.py
