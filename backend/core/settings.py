@@ -1,7 +1,9 @@
 from pathlib import Path
 from dotenv import load_dotenv
+from datetime import timedelta
 import os
 import dj_database_url
+
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -10,7 +12,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # 1. ALLOWED HOSTS & SECURITY
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'cv-builder-backend-sizn.onrender.com',]
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'cv-builder-backend-sizn.onrender.com']
 
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8000',
@@ -19,7 +21,6 @@ CSRF_TRUSTED_ORIGINS = [
     'https://cv-builder-backend-sizn.onrender.com',
     'https://odin-cv-generator-iota.vercel.app',
 ]
-
 
 # 2. APP DEFINITION
 INSTALLED_APPS = [
@@ -44,7 +45,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware", 
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -52,7 +53,6 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
-    
 ]
 
 ROOT_URLCONF = "core.urls"
@@ -108,7 +108,8 @@ ACCOUNT_EMAIL_VERIFICATION = "none"
 ACCOUNT_AUTHENTICATION_METHOD = 'email'
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https' if not DEBUG else 'http'
+# uses https in production (DEBUG=False), http in local dev (DEBUG=True)
 
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
@@ -127,17 +128,18 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
-# Redirects
-LOGIN_REDIRECT_URL = "https://odin-cv-generator-iota.vercel.app/"
+# Redirects — LOGIN_REDIRECT_URL now points to google_login_success view
+# which generates JWT tokens and redirects React with one-time code
+LOGIN_REDIRECT_URL = '/accounts/google/login/success/'
 LOGOUT_REDIRECT_URL = "https://odin-cv-generator-iota.vercel.app"
 
 # 6. COOKIE & SESSION SETTINGS
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_COOKIE_AGE = 86400
-SESSION_COOKIE_SAMESITE = 'None' 
+SESSION_COOKIE_SAMESITE = 'None'
 CSRF_COOKIE_SAMESITE = 'None'
-CSRF_COOKIE_HTTPONLY = False 
+CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_DOMAIN = None
@@ -148,13 +150,14 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "https://odin-cv-generator-iota.vercel.app",
 ]
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_CREDENTIALS = True  # required for cookies to be sent cross-origin
 CORS_URLS_REGEX = r'^.*$'
 
 # 8. REST FRAMEWORK
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
+        "rest_framework_simplejwt.authentication.JWTAuthentication",  # JWT first — checks Authorization: Bearer header
+        "rest_framework.authentication.SessionAuthentication",         # session fallback — for local dev / Django admin
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
@@ -169,12 +172,28 @@ REST_FRAMEWORK = {
     }
 }
 
-# 9. OTHER SETTINGS
+# 9. JWT SETTINGS
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),   # access token expires after 15 mins
+                                                       # short-lived — if stolen, attacker has limited window
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),      # refresh token expires after 7 days
+                                                       # stored in httpOnly cookie — used to get new access tokens
+    'AUTH_HEADER_TYPES': ('Bearer',),                 # React sends: Authorization: Bearer <token>
+}
+
+# 10. REDIS
+REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379')
+# used in urls.py for one-time code store during JWT token exchange
+# falls back to localhost for local development
+
+# 11. OTHER SETTINGS
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 SHELL_PLUS_PRE_IMPORTS = [
     "pandas",
@@ -182,7 +201,7 @@ SHELL_PLUS_PRE_IMPORTS = [
     ("django.db.models", ("Q", "Sum", "Avg", "Max", "Min", "Count", "F")),
 ]
 
-# 10. LOGGING — temporary, to diagnose auth failures
+# 12. LOGGING — temporary, to diagnose auth failures
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -196,7 +215,3 @@ LOGGING = {
         'level': 'DEBUG',
     },
 }
-
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
