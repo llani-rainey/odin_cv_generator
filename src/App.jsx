@@ -9,6 +9,16 @@ import GenericEntryForm from './components/GenericEntryForm'
 import ExperienceEntryForm from './components/ExperienceEntryForm'
 import EducationEntryForm from './components/EducationEntryForm'
 
+// JWT access token — stored outside component so it persists across re-renders
+// not in useState — token changes shouldn't trigger re-renders
+let accessToken = null
+
+// returns Authorization header if token exists, empty object if not
+// spread into headers object: { 'Content-Type': 'application/json', ...authHeaders() }
+function authHeaders() {
+    return accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}
+}
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const SHERLOCK_DATA = {
@@ -263,103 +273,260 @@ export default function App() {
     // useEffect uses .then() chains — it can't be async itself, and .then() is the alternative syntax for handling promises without async/await.
 
     useEffect(() => {
-        // runs once on launch given nothing in the dependency array
-        fetch(`${API_URL}/api/cv/`, {
-            //driven by core/urls.py path we defined , gets a GET request to Django's /api/cv/ endpoint, fetch defaults to GET, have to expiclitly say method: 'POST' if want that, post has a body, GET doesnt
-            // fetch(url, options) same as, const options = { credentials: 'include' }, credentials is a built-in fetch option, such as method: 'GET', headers: {}, mode: 'cors', cache: 'no-cache', redirect: 'follow' etc
-            credentials: 'include', //built-in fetch option, tells the browser to send the session cookie with the request. Without it Django would never know who the user is — cross-origin requests strip cookies by default.
-        })
-            .then((res) => {
-                // runs when the http response arrives, res = response (user assigned name, could be anything, its the resposne object Django sent back, has res.status, res.json() etc
-                if (res.status === 401) {
-                    // not logged in
-                    setUser(null) // sets user to null so the UI shows the login button
-                    setAuthLoading(false) // sets authLoading to false so the loading screen goes away and sherlock shows
-                    return null // stops the chain
-                }
-                if (res.status === 404) {
-                    setUser('loggedIn')
-                    setHasSavedCV(false)
-                    setAuthLoading(false)
-                    return null
-                }
-                if (!res.ok) {
-                    // true if status 200-299 (ok), else unexpected error → stop loading screen, show Sherlock
-                    setAuthLoading(false)
-                    return null
-                }
-                return res.json() // gets passed on to the next 'then' chain, this is async, reading and parsing the body takes time, so it returns a promise (not resolved yet), only runs if status was 200 (logged in and has a saved cv)
+        // runs once on mount — empty [] dependency array means never re-runs
+        // two possible paths on page load:
+        // 1. ?code= in URL → just came back from Google login → exchange code for JWT tokens
+        // 2. no code → try silent refresh using httpOnly refresh_token cookie → get new access token
+        // useEffect uses .then() chains — can't be async itself, .then() is the alternative syntax for promises
+
+        const params = new URLSearchParams(window.location.search)
+        // URLSearchParams — built-in browser API, parses the URL query string
+        // window.location.search = '?code=abc123' — the query string part of the current URL
+        // new URLSearchParams('?code=abc123').get('code') → 'abc123'
+        // new URLSearchParams('').get('code') → null
+
+        const code = params.get('code')
+        // .get() — URLSearchParams method, returns value for key or null if not present
+        // code = 'abc123xyz...' if coming back from Google login, null otherwise
+
+        if (code) {
+            // PATH 1 — just came back from Google OAuth
+            // Django redirected here with ?code=abc123 in URL after successful login
+            // code is a one-time token stored in Redis for 60 seconds
+
+            window.history.replaceState({}, '', '/')
+            // replaceState — built-in browser API, updates the URL bar without triggering a page reload
+            // removes ?code=abc123 from URL — security: don't leave the code sitting in the URL bar
+            // replaceState(stateObject, title, url) — stateObject={} (unused), title='' (ignored by browsers), url='/'
+
+            fetch(`${API_URL}/api/token/exchange/`, {
+                // POST the one-time code to Django — Django validates against Redis, returns JWT tokens
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                // credentials: 'include' needed here so Django can SET the httpOnly refresh_token cookie
+                // the cookie travels in the response Set-Cookie header
+                // without credentials: 'include', browser ignores Set-Cookie on cross-origin responses
+                body: JSON.stringify({ code }),
+                // { code } is ES6 shorthand for { code: code }
+                // sends: { "code": "abc123xyz..." }
             })
-            .then((data) => {
-                // this is res.json(), data is what comes out of the promise, now an actual JS object, not a promise, '.then' does the unwrapping
-                if (data) {
-                    // guards against null from 401/404 branches above, is null was returned, this block doesnt run
-                    setUser('loggedIn')
-                    setHasSavedCV(true)
-                    setPersonalInfo({
-                        name: data.name || '', // if undefined or null, use empty string instead of crashing
-                        title: data.title || '',
-                        location: data.location || '',
-                        phone: data.phone || '',
-                        email: data.email || '',
-                        address: data.address || '',
-                        visaStatus: data.visaStatus || '',
-                        links: (data.links || []).map((link) => ({
-                            //if links missing, use empty array so .map doesnt crash. link is an obejct like {id: 5, label: 'Github', url: 'https...'} so we wrap the object in () so JS knows its an object not a code block
-                            ...link, // spread operator copies all the existing properties from link in the new object and then we override/add id below
-                            id: link.id?.toString() || crypto.randomUUID(), // if link.id exists, call .toString() on it, converting the integer to string, if left side is undefined (id was missing), generate a fresh UUID instead. Primary keys are integers by default, when django creates a model, Django automatically adds id = models.AutoField(primary_key=True), and DB stores it as an intger, when DRF serialziers this to JSON, it continues to be in integer format, int format would work as key for JS but would be inconsistent with our other fields, reacts docs say keys should be strings and nonetheless the UUID is a string so this keeps it consistent
-                        })),
+                .then((res) => res.json())
+                // parse response body — returns { access: 'eyJ...' } if valid, { error: '...' } if invalid
+                .then((data) => {
+                    if (data.access) {
+                        accessToken = data.access
+                        // store access token in module-level variable outside component
+                        // not useState — token changes shouldn't trigger re-renders
+                        // accessToken persists across re-renders but is lost on page refresh
+                        // page refresh → silent refresh path below gets a new one from the cookie
+
+                        return fetch(`${API_URL}/api/cv/`, {
+                            // now fetch CV using the new access token
+                            headers: authHeaders(),
+                            // authHeaders() returns { Authorization: 'Bearer eyJ...' }
+                            // no credentials: 'include' needed — using Bearer token not session cookie
+                            // Bearer token in header bypasses all cross-origin cookie issues
+                        })
+                    } else {
+                        // code exchange failed — invalid or expired code
+                        setAuthLoading(false)
+                        return null
+                    }
+                })
+                .then((res) => {
+                    // handles response from /api/cv/ fetch above
+                    if (!res) return null
+                    if (res.status === 404) {
+                        // logged in but no CV saved yet — show Sherlock + demo banner
+                        setUser('loggedIn')
+                        setHasSavedCV(false)
+                        setAuthLoading(false)
+                        return null
+                    }
+                    if (!res.ok) {
+                        // unexpected error — stop loading screen, show Sherlock
+                        setAuthLoading(false)
+                        return null
+                    }
+                    return res.json()
+                    // gets passed on to next .then — async, returns promise (not resolved yet)
+                    // only reaches here if status 200 — logged in and has a saved CV
+                })
+                .then((data) => {
+                    // data is res.json() resolved — actual JS object, .then() did the unwrapping
+                    if (data) {
+                        // guards against null from branches above — if null was returned, this block doesn't run
+                        setUser('loggedIn')
+                        setHasSavedCV(true)
+                        setPersonalInfo({
+                            name: data.name || '',
+                            title: data.title || '',
+                            location: data.location || '',
+                            phone: data.phone || '',
+                            email: data.email || '',
+                            address: data.address || '',
+                            visaStatus: data.visaStatus || '',
+                            links: (data.links || []).map((link) => ({
+                                // if links missing, use empty array so .map doesn't crash
+                                ...link,
+                                // spread copies all existing properties from link into new object
+                                id: link.id?.toString() || crypto.randomUUID(),
+                                // Django returns integer ids, React needs strings for keys
+                                // ?. optional chaining — if link.id undefined, returns undefined (doesn't crash)
+                                // || crypto.randomUUID() — fallback if id missing
+                            })),
+                        })
+                        setSections(normaliseSectionsFromDjango(data.sections))
+                        // transform Django's bullet objects back to plain strings for React state
+                        setCvSettings({
+                            font: data.font || 'Arial',
+                            fontSize: data.fontSize || '11px',
+                            margins: data.margins || 'narrow',
+                            accentColor: data.accentColor || '#000000',
+                        })
+                        setAuthLoading(false)
+                    }
+                })
+                .catch(() => setAuthLoading(false))
+            // .catch() — runs if anything in the chain throws or rejects
+            // network failure, Redis down etc — stop loading screen regardless
+        } else {
+            // PATH 2 — no code in URL, normal page load or refresh
+            // try silent refresh — use httpOnly refresh_token cookie to get new access token
+            // user never sees a login prompt if they have a valid refresh token
+            // this is the 'silent refresh' pattern
+
+            fetch(`${API_URL}/api/token/refresh/`, {
+                method: 'POST',
+                credentials: 'include',
+                // credentials: 'include' — sends the httpOnly refresh_token cookie
+                // browser sends it automatically because samesite='None' and secure=True
+                // Django reads it from request.COOKIES, validates it, returns new access token
+            })
+                .then((res) => {
+                    if (!res.ok) {
+                        // no refresh token cookie or it expired after 7 days
+                        // user needs to log in again
+                        setUser(null)
+                        setAuthLoading(false)
+                        return null
+                    }
+                    return res.json()
+                    // { access: 'eyJ...' } — new access token
+                })
+                .then((data) => {
+                    if (!data) return
+                    accessToken = data.access
+                    // store new access token in module-level variable
+                    // now use it to fetch the CV
+                    return fetch(`${API_URL}/api/cv/`, {
+                        headers: authHeaders(),
+                        // authHeaders() returns { Authorization: 'Bearer eyJ...' }
                     })
-                    setCvSettings(normaliseSectionsFromDjango(data.sections))
+                })
+                .then((res) => {
+                    if (!res) return null
+                    if (res.status === 404) {
+                        // logged in but no CV saved yet
+                        setUser('loggedIn')
+                        setHasSavedCV(false)
+                        setAuthLoading(false)
+                        return null
+                    }
+                    if (!res.ok) {
+                        setUser(null)
+                        setAuthLoading(false)
+                        return null
+                    }
+                    return res.json()
+                })
+                .then((data) => {
+                    if (data) {
+                        setUser('loggedIn')
+                        setHasSavedCV(true)
+                        setPersonalInfo({
+                            name: data.name || '',
+                            title: data.title || '',
+                            location: data.location || '',
+                            phone: data.phone || '',
+                            email: data.email || '',
+                            address: data.address || '',
+                            visaStatus: data.visaStatus || '',
+                            links: (data.links || []).map((link) => ({
+                                ...link,
+                                id: link.id?.toString() || crypto.randomUUID(),
+                            })),
+                        })
+                        setSections(normaliseSectionsFromDjango(data.sections))
+                        setCvSettings({
+                            font: data.font || 'Arial',
+                            fontSize: data.fontSize || '11px',
+                            margins: data.margins || 'narrow',
+                            accentColor: data.accentColor || '#000000',
+                        })
+                        setAuthLoading(false)
+                    }
+                })
+                .catch(() => {
+                    // network failure — not logged in, show Sherlock
+                    setUser(null)
                     setAuthLoading(false)
-                }
-            })
-            .catch(() => {
-                setAuthLoading(false)
-            })
+                })
+        }
     }, [])
 
+    //FLow of data:
+    // user types in form
+    //     ↓
+    // onChange handlers call setPersonalInfo / setSections etc
+    //     ↓
+    // state updates — React re-renders
+    //     ↓
+    // user clicks Save CV
+    //     ↓
+    // handleSave reads current state values
+    //     ↓
+    // sends them to Django via fetch POST
+    //     ↓
+    // Django saves to DB
+    //     ↓
+    // handleSave updates UI feedback state only (saveStatus, hasSavedCV)
 
-//FLow of data:
-// user types in form
-//     ↓
-// onChange handlers call setPersonalInfo / setSections etc
-//     ↓
-// state updates — React re-renders
-//     ↓
-// user clicks Save CV
-//     ↓
-// handleSave reads current state values
-//     ↓
-// sends them to Django via fetch POST
-//     ↓
-// Django saves to DB
-//     ↓
-// handleSave updates UI feedback state only (saveStatus, hasSavedCV)
-
-
-    //handleSave just reads from state and sends it to Django — it doesn't modify state. The only state it updates is:
+    // handleSave just reads from state and sends it to Django — it doesn't modify state. The only state it updates is:
     // setHasSavedCV(true) // mark that a saved CV now exists in DB
     // setSaveStatus('saved') // update button text to '✓ Saved'
     // setTimeout(() => setSaveStatus(''), 2000) // reset button after 2 seconds
-    async function handleSave() { // handleSave just takes a snapshot of whatever is currently in state and persists it to Django.
-        //marks as async so we can use await inside it, async functions always return a promise but we dont need to worry about that here since we're not using the return value. we use async because we're calling something below that returns a promise so need to mark the function as async
-        setSaveStatus('saving') // updates teh save button text immediately when clicked - before the fetch even starts
+    async function handleSave() {
+        // handleSave just takes a snapshot of whatever is currently in state and persists it to Django
+        // marks as async so we can use await inside it, async functions always return a promise
+        // but we dont need to worry about that here since we're not using the return value
+        // we use async because we're calling something below that returns a promise
 
-        // personalInfo and cvSettings dont need transformation, theyre already in the right shape to send directly.
-        //links only need order adding, simple enough to do inline in the JSON.stringify body which is done below
+        setSaveStatus('saving') // updates the save button text immediately when clicked - before the fetch even starts
+
+        // personalInfo and cvSettings dont need transformation, theyre already in the right shape to send directly
+        // links only need order adding, simple enough to do inline in the JSON.stringify body which is done below
 
         const transformedSections = normaliseSectionsForDjango(sections)
 
         try {
             const response = await fetch(`${API_URL}/api/cv/`, {
-                // data is sent to django as a http request in the shape/format the CVSerializer expected
+                // data is sent to Django as an HTTP request in the shape/format the CVSerializer expects
                 method: 'POST', // override default GET, sending data not reading it
-                credentials: 'include', //built-in fetch option, tells the browser to send the session cookie with the request.
                 headers: {
-                    'Content-Type': 'application/json', // tells Django the body is Json, without this Django might not parse it correctly
+                    'Content-Type': 'application/json', // tells Django the body is JSON, without this Django might not parse it correctly
+                    ...authHeaders(),
+                    // authHeaders() returns { Authorization: 'Bearer eyJ...' } if accessToken exists
+                    // spread merges it into the headers object alongside Content-Type:
+                    // { 'Content-Type': 'application/json', 'Authorization': 'Bearer eyJ...' }
+                    // no credentials: 'include' needed — using Bearer token in header not session cookie
+                    // Bearer token in Authorization header bypasses all cross-origin cookie issues
                 },
-                body: JSON.stringify({ //builds the complete JSON payload DJango expects, spreads personalInfo and cvSettings flat, matches with what the CVSerializer expects. sections uses the pre pre-transformed version with orders and bullet objects
+                body: JSON.stringify({
+                    // builds the complete JSON payload Django expects
+                    // spreads personalInfo and cvSettings flat — matches what CVSerializer expects
+                    // sections uses the pre-transformed version with orders and bullet objects
                     name: personalInfo.name,
                     title: personalInfo.title,
                     location: personalInfo.location,
@@ -367,37 +534,59 @@ export default function App() {
                     email: personalInfo.email,
                     address: personalInfo.address,
                     visaStatus: personalInfo.visaStatus,
-                    links: personalInfo.links.map((link, i) => ({ //dealing with links inline here as fairly simple but could have done a seperate function for this
+                    links: personalInfo.links.map((link, i) => ({
+                        // dealing with links inline here as fairly simple
+                        // could have done a separate normalisation function like sections
                         ...link,
-                        order: i,
+                        order: i, // add order from array position — same pattern as normaliseSectionsForDjango
                     })),
                     font: cvSettings.font,
                     fontSize: cvSettings.fontSize,
                     margins: cvSettings.margins,
                     accentColor: cvSettings.accentColor,
-                    sections: transformedSections, // contains all the nested data underneath it, sections > entries > bullets, Django's serializer unpacks it level by level
+                    sections: transformedSections,
+                    // contains all nested data — sections → entries → bullets
+                    // Django's serializer unpacks it level by level:
+                    // CVSerializer → SectionSerializer → EntrySerializer → BulletSerializer
                 }),
             })
             if (response.ok) {
                 setHasSavedCV(true)
                 setSaveStatus('saved')
                 setTimeout(() => setSaveStatus(''), 2000)
+                // setTimeout — built-in browser function
+                // runs callback after delay in milliseconds
+                // resets button back to 'Save CV' after showing '✓ Saved' for 2 seconds
             } else {
                 const errors = await response.json()
+                // await response.json() — parse Django's error response
+                // could be validation errors: { email: ['Enter a valid email'] }
                 console.error('Save errors:', errors)
                 setSaveStatus('error')
             }
         } catch (e) {
+            // catch — runs if fetch fails completely (network error, server down etc)
+            // e — user assigned name, the error object
             console.error('Save failed:', e)
             setSaveStatus('error')
         }
     }
 
-    function getCookie(name) {
-        const value = `; ${document.cookie}`
-        const parts = value.split(`; ${name}=`)
-        if (parts.length === 2) return parts.pop().split(';').shift()
-        return ''
+    async function handleLogout() {
+        // POST to Django to delete the refresh token cookie server-side
+        // important: must tell Django to delete the cookie — can't delete httpOnly cookies from JavaScript
+        // JavaScript can't read or delete httpOnly cookies — that's the whole point of httpOnly
+        // only the server that set the cookie can delete it
+        await fetch(`${API_URL}/api/auth/logout/`, {
+            method: 'POST',
+            credentials: 'include', // sends the refresh_token cookie so Django can delete it
+            headers: authHeaders(), // sends Bearer token so Django knows who is logging out
+        })
+        accessToken = null // clear access token from module-level variable
+        setUser(null) // update UI — shows Sign in with Google button
+        setHasSavedCV(false) // reset hasSavedCV — no longer logged in
+        setPersonalInfo(SHERLOCK_DATA.personalInfo) // reset to Sherlock demo data
+        setSections(SHERLOCK_DATA.sections) // reset sections to Sherlock demo data
     }
 
     function handleCvSettingsChange(field, value) {
@@ -657,12 +846,12 @@ Now please map my CV content to this structure. Here is my CV:`
                                                 : 'Save CV'}
                                     </button>
 
-                                    <a
-                                        href={`${API_URL}/accounts/logout/`}
+                                    <button
                                         className="btn-logout"
+                                        onClick={handleLogout}
                                     >
                                         Logout
-                                    </a>
+                                    </button>
                                 </>
                             ) : (
                                 <a
