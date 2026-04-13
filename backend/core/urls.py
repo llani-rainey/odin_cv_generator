@@ -2,9 +2,15 @@ from django.contrib import admin
 from django.contrib.auth import logout
 from django.shortcuts import redirect
 from django.urls import path, include
-from django.http import JsonResponse  # Django built-in — returns a JSON HTTP response, simpler than Response() for non-DRF views
 from django.contrib.auth.decorators import login_required  # Django built-in decorator — blocks unauthenticated users, redirects to login
 from rest_framework_simplejwt.tokens import RefreshToken  # simplejwt class — generates JWT token pairs (access + refresh) for a user
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+# api_view — DRF decorator, transforms plain function into DRF view
+#             makes request.data available, handles CSRF exemption, filters methods
+# authentication_classes — DRF decorator, controls how user is identified
+# permission_classes — DRF decorator, controls who is allowed through
+from rest_framework.permissions import AllowAny  # DRF built-in — lets everyone through, no login required
+from rest_framework.response import Response  # DRF response — auto converts Python dict to JSON
 import secrets  # Python built-in module — generates cryptographically secure random strings, safer than random module for security purposes
 import json  # Python built-in module — converts between Python dicts and JSON strings (json.dumps = dict→string, json.loads = string→dict)
 import redis  # third party package — Python client for Redis, installed via pip install redis
@@ -21,12 +27,14 @@ redis_client = redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:637
 def logout_view(request):
     # plain Django view — not a DRF view, no @api_view decorator needed
     # request injected by Django because logout_view is registered in urlpatterns
+    # used for allauth browser-based logout — does a full page redirect
+    # separate from api_logout_view which returns JSON for React to handle
     response = redirect('https://odin-cv-generator-iota.vercel.app')
     # redirect() — Django built-in, returns an HTTP 302 response pointing browser to new URL
-    response.delete_cookie('refresh_token')
+    response.delete_cookie('refresh_token', samesite='None')
     # delete_cookie() — Django built-in method on response object
     # tells browser to delete the refresh_token cookie by setting its expiry to the past
-    # important: must delete cookie before logout() clears the session
+    # samesite='None' must match how the cookie was originally set — otherwise browser ignores the deletion
     logout(request)
     # logout() — Django built-in imported at top, clears the session from DB and session cookie
     return response
@@ -80,30 +88,33 @@ def google_login_success(request):
     )
 
 
+@api_view(['POST'])
+# DRF decorator — only accepts POST requests, returns 405 for anything else
+# makes request.data available — parsed JSON body, no need for json.loads(request.body)
+# handles CSRF exemption automatically — correct approach vs @csrf_exempt
+# this is why we switched from plain Django views — DRF handles CSRF properly for API endpoints
+@authentication_classes([])
+# empty list — no authentication needed for this endpoint
+# this is a pre-auth endpoint — user isn't logged in yet when they hit this
+# no session cookie, no JWT token — just a one-time code from Redis
+@permission_classes([AllowAny])
+# AllowAny — let everyone through the door
+# we do our own validation inside (checking the Redis code)
 def exchange_code(request):
     # React POSTs the one-time code here immediately after being redirected back
     # Django validates code against Redis, returns access token in response body
     # sets refresh token as httpOnly cookie — JavaScript can never read it (XSS protection)
     # code is removed after use — atomic get-and-delete prevents reuse
 
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST required'}, status=405)
-        # JsonResponse — Django built-in imported at top
-        # takes a Python dict, converts to JSON, returns as HTTP response
-        # simpler than DRF's Response() for non-api_view functions
-        # status=405 — Method Not Allowed
-
-    body = json.loads(request.body)
-    # request.body — Django built-in, raw bytes of the request body
-    # json.loads() — Python built-in, parses JSON string → Python dict
-    # opposite of json.dumps() used above
-
-    code = body.get('code')
-    # .get() — Python dict built-in, safe access with None default if key missing
-    # same as body['code'] but doesn't crash if 'code' not in body
+    code = request.data.get('code')
+    # request.data — DRF parsed JSON body, available because of @api_view decorator
+    # .get() — safe dict access, returns None if key missing
+    # replaces json.loads(request.body) — DRF does the parsing automatically
 
     if not code:
-        return JsonResponse({'error': 'No code provided'}, status=400)
+        return Response({'error': 'No code provided'}, status=400)
+    # Response — DRF built-in imported at top, auto converts dict to JSON
+    # replaces JsonResponse — consistent with DRF pattern
 
     token_data = redis_client.getdel(f'code:{code}')
     # getdel() — Redis built-in method on the client object
@@ -114,7 +125,7 @@ def exchange_code(request):
     # 'code:{code}' — same namespaced key format used in setex() above
 
     if not token_data:
-        return JsonResponse({'error': 'Invalid or expired code'}, status=400)
+        return Response({'error': 'Invalid or expired code'}, status=400)
         # None = key didn't exist — either:
         # 1. code was wrong
         # 2. code already used (getdel deleted it)
@@ -124,7 +135,7 @@ def exchange_code(request):
     # token_data comes back from Redis as bytes — json.loads() parses it back to dict
     # opposite of json.dumps() used in setex() above
 
-    response = JsonResponse({'access': tokens['access']})
+    response = Response({'access': tokens['access']})
     # access token returned in response body — React reads it and stores in state (memory)
     # never stored in localStorage — vulnerable to cross-site scripting (XSS)
     # lives only in React state — lost on page refresh (handled by refresh token below)
@@ -143,15 +154,17 @@ def exchange_code(request):
     return response
 
 
+@api_view(['POST'])
+@authentication_classes([])
+@permission_classes([AllowAny])
 def refresh_token_view(request):
     # React calls this on every page load to silently get a new access token
     # access token lives in React state — lost on page refresh
     # refresh token lives in httpOnly cookie — persists across refreshes
     # React can't read the httpOnly cookie directly — Django reads it and returns a new access token
     # this is the 'silent refresh' pattern — user never sees a login prompt on refresh
-
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST required'}, status=405)
+    # @authentication_classes([]) — no auth needed, the refresh token cookie IS the auth
+    # @permission_classes([AllowAny]) — everyone allowed, we validate via cookie inside
 
     refresh_token = request.COOKIES.get('refresh_token')
     # request.COOKIES — Django built-in dict of all cookies sent with the request
@@ -159,7 +172,7 @@ def refresh_token_view(request):
     # browser sends this cookie automatically because samesite='None' and secure=True
 
     if not refresh_token:
-        return JsonResponse({'error': 'No refresh token'}, status=401)
+        return Response({'error': 'No refresh token'}, status=401)
         # no cookie = user has never logged in, or cookie expired after 7 days
         # React handles 401 here by showing the Sign in with Google button
 
@@ -173,25 +186,30 @@ def refresh_token_view(request):
         # .access_token — simplejwt property, generates a new access token from the refresh token
         # str() — converts the token object to the JWT string: 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...'
 
-        return JsonResponse({'access': access_token})
+        return Response({'access': access_token})
         # return new access token in body — React stores it in state
         # React then uses it in Authorization: Bearer header for all subsequent requests
 
     except Exception:
         # TokenError or any other exception — refresh token is invalid or expired
-        return JsonResponse({'error': 'Invalid refresh token'}, status=401)
+        return Response({'error': 'Invalid refresh token'}, status=401)
         # React handles 401 by showing Sign in with Google button
         # user needs to log in again to get a new refresh token
-        
+
+
+@api_view(['POST'])
+@authentication_classes([])
+@permission_classes([AllowAny])
 def api_logout_view(request):
     # API logout — called by React's handleLogout function
     # deletes the httpOnly refresh_token cookie server-side
     # JavaScript can't delete httpOnly cookies directly — only the server can
     # separate from logout_view which does a browser redirect (used for allauth flows)
-    # this returns JSON — React handles the redirect itself
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST required'}, status=405)
-    response = JsonResponse({'detail': 'Logged out'})
+    # this returns JSON — React handles the UI reset itself (clears accessToken, shows login button)
+    # @authentication_classes([]) — no auth needed, anyone can log out
+    # @permission_classes([AllowAny]) — everyone allowed through
+
+    response = Response({'detail': 'Logged out'})
     response.delete_cookie(
         'refresh_token',
         samesite='None',    # must match how cookie was originally set in exchange_code
@@ -245,11 +263,10 @@ urlpatterns = [
 
     path('api/auth/logout/', api_logout_view, name='api_logout'),
     # React POSTs here when user clicks Logout
-    # must come BEFORE path('api/') 
+    # must come BEFORE path('api/')
     # deletes httpOnly refresh_token cookie server-side
     # returns JSON — React then clears accessToken and resets UI
-    
-    
+
     path('api/', include('cv_api.urls')),
     # include means don't handle this here, delegate it to another urls.py file
     # any request starting with /api/ → handed off to cv_api/urls.py
