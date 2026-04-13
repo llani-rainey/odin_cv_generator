@@ -33,6 +33,7 @@ django-stubs==6.0.1
 django-stubs-ext==6.0.1
 djangorestframework==3.17.0
 djangorestframework-stubs==3.16.9
+djangorestframework_simplejwt==5.5.1
 dotenv==0.9.9
 executing==2.2.1
 factory_boy==3.3.3
