@@ -19,6 +19,7 @@ cryptography==46.0.6
 daphne==4.2.1
 decorator==5.2.1
 dj-database-url==3.1.2
+dj-rest-auth==7.2.0
 Django==6.0.3
 django-allauth==64.2.1
 django-browser-reload==1.21.0
@@ -31,6 +32,8 @@ django-silk==5.5.0
 django-stubs==6.0.1
 django-stubs-ext==6.0.1
 djangorestframework==3.17.0
+djangorestframework-stubs==3.16.9
+djangorestframework_simplejwt==5.5.1
 dotenv==0.9.9
 executing==2.2.1
 factory_boy==3.3.3
@@ -58,7 +61,6 @@ platformdirs==4.9.4
 prompt_toolkit==3.0.52
 psycopg==3.3.3
 psycopg-binary==3.3.3
-psycopg2==2.9.11
 psycopg2-binary==2.9.11
 ptyprocess==0.7.0
 pure_eval==0.2.3
