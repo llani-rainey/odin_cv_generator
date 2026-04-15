@@ -39,16 +39,20 @@ This approach — generating a structured prompt that instructs an AI to map arb
 ## Tech Stack
 
 ### Frontend
-- **React** (Vite)
+- **React 19** (Vite)
 - **JavaScript** (ES6+)
 - **CSS** (custom, no framework)
 - `html2pdf.js` for PDF export
+- **Vitest** + **Testing Library** for component tests
 
 ### Backend
 - **Django 6** + **Django REST Framework**
 - **PostgreSQL**
+- **SimpleJWT** — JWT access + refresh token auth
+- **Redis** — one-time code store for OAuth token exchange
 - **django-allauth** — Google OAuth
-- **dj-database-url** — database configuration
+- **mypy** + **django-stubs** — static type checking
+- **ruff** + **black** — linting and formatting
 - **gunicorn** — production WSGI server
 - **WhiteNoise** — static file serving
 
@@ -56,6 +60,7 @@ This approach — generating a structured prompt that instructs an AI to map arb
 - Frontend → **Vercel**
 - Backend → **Render**
 - Database → **Render PostgreSQL**
+- CI → **GitHub Actions** (lint + type-check + test on push)
 
 ---
 
@@ -97,43 +102,70 @@ User (Django built-in)
 ## Local Setup
 
 ### Prerequisites
-- Python 3.13
+- Python 3.12+
 - Node.js 18+
 - PostgreSQL
+- Redis (`brew install redis && brew services start redis` on macOS)
 
-### Frontend
+### 1. Clone and install
+
 ```bash
-cd odin_cv_generator
-npm install
-npm run dev
+git clone https://github.com/llani-rainey/09_cv-application.git
+cd 09_cv-application
 ```
 
-### Backend
+### 2. Frontend
+
+```bash
+npm install
+npm run dev        # starts Vite dev server at http://localhost:5173
+npm test           # run component tests
+```
+
+### 3. Backend
+
 ```bash
 cd backend
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate    # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-Create a `.env` file in `backend/`:
+Copy the env example and fill in your values:
+
+```bash
+cp .env.example .env
 ```
-SECRET_KEY=your-secret-key
-DEBUG=True
-DB_NAME=cv_db
-DB_USER=your_mac_username
-DB_PASSWORD=
-DB_HOST=127.0.0.1
-DB_PORT=5432
-```
+
+Key values to set:
+- `SECRET_KEY` — generate with: `python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"`
+- `DB_USER` — your PostgreSQL username (usually your macOS username)
+- Create the database first: `createdb cv_db`
 
 ```bash
 python manage.py migrate
 python manage.py createsuperuser
-python manage.py runserver
+python manage.py runserver    # starts Django at http://localhost:8000
 ```
 
-Then in Django admin, add a Google Social Application with your OAuth credentials from Google Cloud Console.
+### 4. Google OAuth (optional — required for save/load)
+
+1. Create a project at [console.cloud.google.com](https://console.cloud.google.com)
+2. Enable the Google+ API, create OAuth 2.0 credentials
+3. Set authorised redirect URI: `http://localhost:8000/accounts/google/login/callback/`
+4. Add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to `backend/.env`
+5. In Django admin (`/admin`), add a Social Application: provider=Google, client ID and secret from above, assign to the example.com site
+
+### 5. Running tests
+
+```bash
+# Backend
+cd backend
+python manage.py test
+
+# Frontend
+npm test
+```
 
 ---
 
@@ -158,11 +190,26 @@ Then in Django admin, add a Google Social Application with your OAuth credential
 - **`dj-database-url`** — parsing a `DATABASE_URL` environment variable into Django's `DATABASES` dict for production
 - **Google OAuth with django-allauth** — `SocialApp` DB records, `SITE_ID`, allauth middleware, redirect URLs, and the cross-origin session cookie problem in production
 
+### Authentication & Security
+- **JWT auth flow** — access tokens stored in React module-level memory (not localStorage — XSS risk), refresh tokens in httpOnly cookies (JavaScript cannot read them)
+- **Silent refresh pattern** — on page load, React calls `/api/token/refresh/` which reads the httpOnly cookie and returns a new access token; user never sees a login prompt if their session is valid
+- **One-time code exchange** — after Google OAuth, Django stores tokens in Redis with a 60-second TTL and redirects with just a short-lived code; React exchanges the code for tokens (never the token itself in the URL)
+- **Custom React hook (`useAuth`)** — extracts auth token lifecycle (exchange, refresh, logout) into a dedicated hook, keeping the main component focused on CV state
+- **Redis** — used as a fast key-value store for the one-time code → token pair; `getdel()` is atomic, preventing race conditions on code reuse
+- **mypy + django-stubs** — static type checking across all backend files; catches type errors before runtime
+
+### Testing
+- **Backend tests (Django TestCase + DRF APIClient)** — 21 tests covering model `__str__` methods, CV CRUD endpoints (auth/no-auth), and all auth endpoints (code exchange, silent refresh, logout)
+- **Mocking Redis** — `unittest.mock.patch('core.urls.redis_client')` replaces the real Redis client in auth view tests so they don't need a live Redis server
+- **factory_boy** — `UserFactory` and `CVFactory` generate test data with clean isolation between test cases
+- **Frontend tests (Vitest + Testing Library)** — component tests for `Header`, `HeaderForm`, `Section`; `fireEvent.change` for controlled inputs instead of userEvent (avoids the controlled-input re-render problem)
+
 ### General
 - **Environment variables** — separating secrets from code using `.env` locally and platform environment variables in production
 - **CORS** — why cross-origin requests require explicit `CORS_ALLOWED_ORIGINS` and `credentials: 'include'` on both sides
 - **Cross-origin session cookies** — browsers block third-party cookies by default; `SameSite=None; Secure=True` is required for cross-origin session auth to work
 - **Deployment** — Vercel for static/frontend (zero config Vite detection), Render for Django (gunicorn, WhiteNoise, collectstatic, PostgreSQL)
+- **CI with GitHub Actions** — backend (ruff, black, mypy, Django tests) and frontend (ESLint, Vitest, Vite build) run on every push to `main`
 - **`git log`, `git reset`, `git rm --cached`** — managing what gets tracked and reverting staged changes
 
 ---

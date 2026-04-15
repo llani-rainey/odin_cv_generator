@@ -8,16 +8,7 @@ import HeaderForm from './components/HeaderForm'
 import GenericEntryForm from './components/GenericEntryForm'
 import ExperienceEntryForm from './components/ExperienceEntryForm'
 import EducationEntryForm from './components/EducationEntryForm'
-
-// JWT access token — stored outside component so it persists across re-renders
-// not in useState — token changes shouldn't trigger re-renders
-let accessToken = null
-
-// returns Authorization header if token exists, empty object if not
-// spread into headers object: { 'Content-Type': 'application/json', ...authHeaders() }
-function authHeaders() {
-    return accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}
-}
+import { useAuth, authHeaders } from './hooks/useAuth'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -252,10 +243,10 @@ export default function App() {
     const [importJson, setImportJson] = useState('')
     const [showImport, setShowImport] = useState(false)
     const [formOpen, setFormOpen] = useState(true)
-    const [user, setUser] = useState(null)
     const [hasSavedCV, setHasSavedCV] = useState(false)
-    const [authLoading, setAuthLoading] = useState(true)
     const [saveStatus, setSaveStatus] = useState('')
+
+    const { user, authLoading, authError, handleLogout: authLogout } = useAuth()
 
     const [personalInfo, setPersonalInfo] = useState(SHERLOCK_DATA.personalInfo)
     const [cvSettings, setCvSettings] = useState({
@@ -266,215 +257,52 @@ export default function App() {
     })
     const [sections, setSections] = useState(SHERLOCK_DATA.sections)
 
-    //     useState   → stores values, triggers re-renders when values change
-    //     useEffect  → reaches outside React (fetch, timers, DOM etc)
-    //             → controlled by dependency array so it doesn't run uncontrollably
-
-    // useEffect uses .then() chains — it can't be async itself, and .then() is the alternative syntax for handling promises without async/await.
-
+    // When user becomes 'loggedIn' (set by useAuth hook), fetch their saved CV.
+    // useEffect([user]) — runs whenever user state changes.
+    // useAuth handles the token exchange/refresh; this effect handles the CV data fetch.
     useEffect(() => {
-        // runs once on mount — empty [] dependency array means never re-runs
-        // two possible paths on page load:
-        // 1. ?code= in URL → just came back from Google login → exchange code for JWT tokens
-        // 2. no code → try silent refresh using httpOnly refresh_token cookie → get new access token
-        // useEffect uses .then() chains — can't be async itself, .then() is the alternative syntax for promises
+        if (user !== 'loggedIn') return
 
-        const params = new URLSearchParams(window.location.search)
-        // URLSearchParams — built-in browser API, parses the URL query string
-        // window.location.search = '?code=abc123' — the query string part of the current URL
-        // new URLSearchParams('?code=abc123').get('code') → 'abc123'
-        // new URLSearchParams('').get('code') → null
-
-        const code = params.get('code')
-        // .get() — URLSearchParams method, returns value for key or null if not present
-        // code = 'abc123xyz...' if coming back from Google login, null otherwise
-
-        if (code) {
-            // PATH 1 — just came back from Google OAuth
-            // Django redirected here with ?code=abc123 in URL after successful login
-            // code is a one-time token stored in Redis for 60 seconds
-
-            window.history.replaceState({}, '', '/')
-            // replaceState — built-in browser API, updates the URL bar without triggering a page reload
-            // removes ?code=abc123 from URL — security: don't leave the code sitting in the URL bar
-            // replaceState(stateObject, title, url) — stateObject={} (unused), title='' (ignored by browsers), url='/'
-
-            fetch(`${API_URL}/api/token/exchange/`, {
-                // POST the one-time code to Django — Django validates against Redis, returns JWT tokens
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                // credentials: 'include' needed here so Django can SET the httpOnly refresh_token cookie
-                // the cookie travels in the response Set-Cookie header
-                // without credentials: 'include', browser ignores Set-Cookie on cross-origin responses
-                body: JSON.stringify({ code }),
-                // { code } is ES6 shorthand for { code: code }
-                // sends: { "code": "abc123xyz..." }
+        fetch(`${API_URL}/api/cv/`, { headers: authHeaders() })
+            .then((res) => {
+                if (res.status === 404) {
+                    // Logged in but no CV saved yet — show Sherlock demo + banner
+                    setHasSavedCV(false)
+                    return null
+                }
+                if (!res.ok) return null
+                return res.json()
             })
-                .then((res) => res.json())
-                // parse response body — returns { access: 'eyJ...' } if valid, { error: '...' } if invalid
-                .then((data) => {
-                    if (data.access) {
-                        accessToken = data.access
-                        // store access token in module-level variable outside component
-                        // not useState — token changes shouldn't trigger re-renders
-                        // accessToken persists across re-renders but is lost on page refresh
-                        // page refresh → silent refresh path below gets a new one from the cookie
-
-                        return fetch(`${API_URL}/api/cv/`, {
-                            // now fetch CV using the new access token
-                            headers: authHeaders(),
-                            // authHeaders() returns { Authorization: 'Bearer eyJ...' }
-                            // no credentials: 'include' needed — using Bearer token not session cookie
-                            // Bearer token in header bypasses all cross-origin cookie issues
-                        })
-                    } else {
-                        // code exchange failed — invalid or expired code
-                        setAuthLoading(false)
-                        return null
-                    }
+            .then((data) => {
+                if (!data) return
+                // Logged in and has a saved CV — populate form state from API response
+                setHasSavedCV(true)
+                setPersonalInfo({
+                    name: data.name || '',
+                    title: data.title || '',
+                    location: data.location || '',
+                    phone: data.phone || '',
+                    email: data.email || '',
+                    address: data.address || '',
+                    visaStatus: data.visaStatus || '',
+                    links: (data.links || []).map((link) => ({
+                        ...link,
+                        // Django returns integer ids, React needs strings for keys
+                        id: link.id?.toString() || crypto.randomUUID(),
+                    })),
                 })
-                .then((res) => {
-                    // handles response from /api/cv/ fetch above
-                    if (!res) return null
-                    if (res.status === 404) {
-                        // logged in but no CV saved yet — show Sherlock + demo banner
-                        setUser('loggedIn')
-                        setHasSavedCV(false)
-                        setAuthLoading(false)
-                        return null
-                    }
-                    if (!res.ok) {
-                        // unexpected error — stop loading screen, show Sherlock
-                        setAuthLoading(false)
-                        return null
-                    }
-                    return res.json()
-                    // gets passed on to next .then — async, returns promise (not resolved yet)
-                    // only reaches here if status 200 — logged in and has a saved CV
+                setSections(normaliseSectionsFromDjango(data.sections))
+                setCvSettings({
+                    font: data.font || 'Arial',
+                    fontSize: data.fontSize || '11px',
+                    margins: data.margins || 'narrow',
+                    accentColor: data.accentColor || '#000000',
                 })
-                .then((data) => {
-                    // data is res.json() resolved — actual JS object, .then() did the unwrapping
-                    if (data) {
-                        // guards against null from branches above — if null was returned, this block doesn't run
-                        setUser('loggedIn')
-                        setHasSavedCV(true)
-                        setPersonalInfo({
-                            name: data.name || '',
-                            title: data.title || '',
-                            location: data.location || '',
-                            phone: data.phone || '',
-                            email: data.email || '',
-                            address: data.address || '',
-                            visaStatus: data.visaStatus || '',
-                            links: (data.links || []).map((link) => ({
-                                // if links missing, use empty array so .map doesn't crash
-                                ...link,
-                                // spread copies all existing properties from link into new object
-                                id: link.id?.toString() || crypto.randomUUID(),
-                                // Django returns integer ids, React needs strings for keys
-                                // ?. optional chaining — if link.id undefined, returns undefined (doesn't crash)
-                                // || crypto.randomUUID() — fallback if id missing
-                            })),
-                        })
-                        setSections(normaliseSectionsFromDjango(data.sections))
-                        // transform Django's bullet objects back to plain strings for React state
-                        setCvSettings({
-                            font: data.font || 'Arial',
-                            fontSize: data.fontSize || '11px',
-                            margins: data.margins || 'narrow',
-                            accentColor: data.accentColor || '#000000',
-                        })
-                        setAuthLoading(false)
-                    }
-                })
-                .catch(() => setAuthLoading(false))
-            // .catch() — runs if anything in the chain throws or rejects
-            // network failure, Redis down etc — stop loading screen regardless
-        } else {
-            // PATH 2 — no code in URL, normal page load or refresh
-            // try silent refresh — use httpOnly refresh_token cookie to get new access token
-            // user never sees a login prompt if they have a valid refresh token
-            // this is the 'silent refresh' pattern
-
-            fetch(`${API_URL}/api/token/refresh/`, {
-                method: 'POST',
-                credentials: 'include',
-                // credentials: 'include' — sends the httpOnly refresh_token cookie
-                // browser sends it automatically because samesite='None' and secure=True
-                // Django reads it from request.COOKIES, validates it, returns new access token
             })
-                .then((res) => {
-                    if (!res.ok) {
-                        // no refresh token cookie or it expired after 7 days
-                        // user needs to log in again
-                        setUser(null)
-                        setAuthLoading(false)
-                        return null
-                    }
-                    return res.json()
-                    // { access: 'eyJ...' } — new access token
-                })
-                .then((data) => {
-                    if (!data) return
-                    accessToken = data.access
-                    // store new access token in module-level variable
-                    // now use it to fetch the CV
-                    return fetch(`${API_URL}/api/cv/`, {
-                        headers: authHeaders(),
-                        // authHeaders() returns { Authorization: 'Bearer eyJ...' }
-                    })
-                })
-                .then((res) => {
-                    if (!res) return null
-                    if (res.status === 404) {
-                        // logged in but no CV saved yet
-                        setUser('loggedIn')
-                        setHasSavedCV(false)
-                        setAuthLoading(false)
-                        return null
-                    }
-                    if (!res.ok) {
-                        setUser(null)
-                        setAuthLoading(false)
-                        return null
-                    }
-                    return res.json()
-                })
-                .then((data) => {
-                    if (data) {
-                        setUser('loggedIn')
-                        setHasSavedCV(true)
-                        setPersonalInfo({
-                            name: data.name || '',
-                            title: data.title || '',
-                            location: data.location || '',
-                            phone: data.phone || '',
-                            email: data.email || '',
-                            address: data.address || '',
-                            visaStatus: data.visaStatus || '',
-                            links: (data.links || []).map((link) => ({
-                                ...link,
-                                id: link.id?.toString() || crypto.randomUUID(),
-                            })),
-                        })
-                        setSections(normaliseSectionsFromDjango(data.sections))
-                        setCvSettings({
-                            font: data.font || 'Arial',
-                            fontSize: data.fontSize || '11px',
-                            margins: data.margins || 'narrow',
-                            accentColor: data.accentColor || '#000000',
-                        })
-                        setAuthLoading(false)
-                    }
-                })
-                .catch(() => {
-                    // network failure — not logged in, show Sherlock
-                    setUser(null)
-                    setAuthLoading(false)
-                })
-        }
-    }, [])
+            .catch(() => {
+                // Network failure — leave Sherlock demo data in place
+            })
+    }, [user])
 
     //FLow of data:
     // user types in form
@@ -572,21 +400,13 @@ export default function App() {
         }
     }
 
-    async function handleLogout() {
-        // POST to Django to delete the refresh token cookie server-side
-        // important: must tell Django to delete the cookie — can't delete httpOnly cookies from JavaScript
-        // JavaScript can't read or delete httpOnly cookies — that's the whole point of httpOnly
-        // only the server that set the cookie can delete it
-        await fetch(`${API_URL}/api/auth/logout/`, {
-            method: 'POST',
-            credentials: 'include', // sends the refresh_token cookie so Django can delete it
-            headers: authHeaders(), // sends Bearer token so Django knows who is logging out
-        })
-        accessToken = null // clear access token from module-level variable
-        setUser(null) // update UI — shows Sign in with Google button
-        setHasSavedCV(false) // reset hasSavedCV — no longer logged in
-        setPersonalInfo(SHERLOCK_DATA.personalInfo) // reset to Sherlock demo data
-        setSections(SHERLOCK_DATA.sections) // reset sections to Sherlock demo data
+    function handleLogout() {
+        // authLogout (from useAuth) handles the server-side cookie deletion and clears the token.
+        // Reset local CV state back to Sherlock demo data here.
+        authLogout()
+        setHasSavedCV(false)
+        setPersonalInfo(SHERLOCK_DATA.personalInfo)
+        setSections(SHERLOCK_DATA.sections)
     }
 
     function handleCvSettingsChange(field, value) {
@@ -854,22 +674,27 @@ Now please map my CV content to this structure. Here is my CV:`
                                     </button>
                                 </>
                             ) : (
-                                <a
-                                    href={`${API_URL}/accounts/google/login/`}
-                                    className="btn-login"
-                                >
-                                    <img
-                                        src="https://developers.google.com/identity/images/g-logo.png"
-                                        alt="Google"
-                                        style={{
-                                            width: '16px',
-                                            height: '16px',
-                                            marginRight: '8px',
-                                            verticalAlign: 'middle',
-                                        }}
-                                    />
-                                    Sign in with Google
-                                </a>
+                                <>
+                                    {authError && (
+                                        <span className="auth-error">{authError}</span>
+                                    )}
+                                    <a
+                                        href={`${API_URL}/accounts/google/login/`}
+                                        className="btn-login"
+                                    >
+                                        <img
+                                            src="https://developers.google.com/identity/images/g-logo.png"
+                                            alt="Google"
+                                            style={{
+                                                width: '16px',
+                                                height: '16px',
+                                                marginRight: '8px',
+                                                verticalAlign: 'middle',
+                                            }}
+                                        />
+                                        Sign in with Google
+                                    </a>
+                                </>
                             )}
                         </div>
                     )}

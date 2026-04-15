@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -20,7 +22,7 @@ class CV(models.Model): #start at biggest/parent (User is built in to django and
     margins = models.CharField(max_length=50, default='narrow')
     accent_color = models.CharField(max_length=7, default='#000000')
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"CV of {self.name}"
 
 
@@ -32,7 +34,7 @@ class HeaderLink(models.Model):
     class Meta:
         ordering = ['order']  # add this
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.label} ({self.url})"
 
 
@@ -50,7 +52,7 @@ class Section(models.Model):
     class Meta:
         ordering = ['order']
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.title} ({self.type})"
 
 
@@ -82,7 +84,7 @@ class Entry(models.Model):
     class Meta:
         ordering = ['order']
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.job_title or self.degree or self.subheading or f"Entry {self.id}"
 
 
@@ -94,9 +96,9 @@ class Bullet(models.Model):
     class Meta:
         ordering = ['order']
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.text[:50]
-    
+
 
 # class-level version where you start from scratch and fetch from the DB:
 #CV.objects.get(id=1).sections.first().entries.first().bullets.all()

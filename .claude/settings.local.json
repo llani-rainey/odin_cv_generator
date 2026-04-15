@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find . -name .env* -o -name *.env)"
+      "Bash(find . -name .env* -o -name *.env)",
+      "Bash(find /Users/user/Documents/repos/projects/09_cv-application -not -path */node_modules/* -not -path */.git/*)",
+      "Bash(find /Users/user/Documents/repos/projects/09_cv-application -path */.github/* -o -path */workflows/*)",
+      "Bash(python manage.py test cv_api --verbosity=2)",
+      "Bash(npm install:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run:*)",
+      "Bash(python manage.py test --verbosity=1)"
     ]
   }
 }

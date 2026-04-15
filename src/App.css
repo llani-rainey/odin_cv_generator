@@ -798,3 +798,8 @@ textarea:focus {
     margin-bottom: 2px;
     margin-top: 2px;
 }
+.auth-error {
+    color: #c0392b;
+    font-size: 12px;
+    margin-right: 8px;
+}
