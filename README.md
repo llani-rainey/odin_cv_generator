@@ -156,7 +156,16 @@ python manage.py runserver    # starts Django at http://localhost:8000
 4. Add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to `backend/.env`
 5. In Django admin (`/admin`), add a Social Application: provider=Google, client ID and secret from above, assign to the example.com site
 
-### 5. Running tests
+### 5. Pre-commit hooks (recommended)
+
+Runs ruff, black, and eslint automatically before every commit:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+### 6. Running tests
 
 ```bash
 # Backend

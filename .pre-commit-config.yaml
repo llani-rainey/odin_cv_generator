@@ -1,25 +1,44 @@
-repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.9
-    hooks:
-      - id: ruff
-        args: [--fix]
-        files: ^backend/
-      - id: ruff-format
-        files: ^backend/
+# .pre-commit-config.yaml
+# pre-commit hooks — code that runs automatically every time you do git commit
+# blocks the commit if any check fails — forces you to fix issues before they enter the codebase
+# requires: pip install pre-commit → pre-commit install (one time setup, registers the hooks with git)
 
-  - repo: https://github.com/psf/black
-    rev: 26.3.1
+repos:
+  # ruff — Python linter and formatter, written in Rust so extremely fast
+  # linter = reads your code and flags potential bugs, bad style, unused imports etc
+  # formatter = rewrites your code to a consistent style automatically
+  - repo: https://github.com/astral-sh/ruff-pre-commit  # where pre-commit downloads ruff from
+    rev: v0.15.9                                          # exact version to use — pinned so everyone on the project uses the same version
+    hooks:
+      - id: ruff               # the linter — checks for bugs, unused imports, bad patterns etc
+        args: [--fix]          # --fix means ruff automatically fixes what it can rather than just reporting it
+        files: ^backend/       # regex — only run on files inside the backend/ folder, ignore frontend
+      - id: ruff-format        # the formatter — rewrites Python code to consistent style (spacing, line length etc)
+        files: ^backend/       # same — backend only
+
+  # black — opinionated Python code formatter
+# Black is also a formatter. There's some overlap with ruff-format — in practice you'd usually pick one. Both are here because ruff-format
+# handles most things but black is more battle-tested and some teams still prefer it as the definitive formatter.
+  # "opinionated" means zero configuration — it has one style and enforces it with no exceptions
+  # often used alongside ruff: ruff catches bugs, black enforces style
+  - repo: https://github.com/psf/black  # where pre-commit downloads black from
+    rev: 26.3.1                          # pinned version
     hooks:
       - id: black
-        language_version: python3.12
-        files: ^backend/
+        language_version: python3.12     # tells black which Python version to format for — affects some syntax decisions
+        files: ^backend/                 # backend only
 
-  - repo: local
+  # eslint — JavaScript/React linter
+  # catches issues in your frontend code — unused variables, React hook violations, bad patterns etc
+  # unlike ruff and black which are downloaded from github, this runs locally
+  # because eslint is already installed in your project via npm
+  - repo: local                          # local = don't download anything, run a command that already exists on this machine
     hooks:
       - id: eslint
-        name: ESLint
-        entry: npm run lint
-        language: system
-        pass_filenames: false
-        files: \.(jsx?|tsx?)$
+        name: ESLint                     # display name shown in terminal when hook runs
+        entry: npm run lint              # the actual command that runs — same as typing npm run lint yourself
+        language: system                 # use the system's own node/npm rather than a pre-commit managed environment
+        pass_filenames: false            # don't pass individual filenames to eslint — let npm run lint handle which files to check itself
+        files: \.(jsx?|tsx?)$            # regex — only trigger this hook when .js, .jsx, .ts or .tsx files are changed
+                                         # jsx? means j, then s, then optional x — matches both .js and .jsx
+                                         # tsx? means t, then s, then optional x — matches both .ts and .tsx
