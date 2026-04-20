@@ -10,7 +10,9 @@
       "Bash(npm run:*)",
       "Bash(python manage.py test --verbosity=1)",
       "Bash(pip install:*)",
-      "Bash(pre-commit install:*)"
+      "Bash(pre-commit install:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
