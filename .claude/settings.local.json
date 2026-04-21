@@ -12,7 +12,16 @@
       "Bash(pip install:*)",
       "Bash(pre-commit install:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(source .venv/bin/activate)",
+      "Bash(1 which:*)",
+      "Bash(python:*)",
+      "Bash(pip list:*)",
+      "Bash(git -C /Users/user/Documents/repos/projects/09_cv-application add backend/)",
+      "Bash(git -C /Users/user/Documents/repos/projects/09_cv-application status --short)",
+      "Bash(git -C /Users/user/Documents/repos/projects/09_cv-application add backend/.gitignore)",
+      "Bash(git -C /Users/user/Documents/repos/projects/09_cv-application rm --cached backend/test.db)",
+      "Bash(git:*)"
     ]
   }
 }
